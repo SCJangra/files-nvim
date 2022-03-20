@@ -165,4 +165,40 @@ function Client:subscribe(method, params)
   return err, sr
 end
 
+function Client:get_meta(id)
+  return self:request('get_meta', { id })
+end
+
+function Client:list_meta(dir_id)
+  return self:request('list_meta', { dir_id })
+end
+
+function Client:create_file(name, dir_id)
+  return self:request('create_file', { name, dir_id })
+end
+
+function Client:create_dir(name, dir_id)
+  return self:request('create_dir', { name, dir_id })
+end
+
+function Client:delete_file(file_id)
+  return self:request('delete_file', { file_id })
+end
+
+function Client:delete_dir(dir_id)
+  return self:request('delete_dir', { dir_id })
+end
+
+function Client:rename(id, new_name)
+  return self:request('rename', { id, new_name })
+end
+
+function Client:move(id, dest_id)
+  return self:request('move', { id, dest_id })
+end
+
+function Client:copy_file(file_id, dest_id)
+  return self:subscribe('copy_file', { file_id, dest_id })
+end
+
 return Client
