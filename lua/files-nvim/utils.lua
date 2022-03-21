@@ -1,3 +1,5 @@
+local a = require 'plenary.async'
+
 local round = function(num, idp)
   return tonumber(string.format('%.' .. (idp or 0) .. 'f', num))
 end
@@ -25,7 +27,14 @@ local bytes_to_size = function(bytes)
   end
 end
 
+local wrap = function(fun)
+  return function()
+    a.run(fun)
+  end
+end
+
 return {
   round = round,
   bytes_to_size = bytes_to_size,
+  wrap = wrap,
 }

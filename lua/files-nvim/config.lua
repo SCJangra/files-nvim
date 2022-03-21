@@ -1,4 +1,11 @@
 local uconf = {
+  exp = {
+    fields = { 'size' },
+    hl = {
+      size = 'FilesNvimExpFileSize',
+      name = 'FilesNvimExpFileName',
+    },
+  },
   keymaps = {
     quit = 'q',
   },
