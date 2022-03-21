@@ -56,7 +56,6 @@ function Exp:open_current()
   self.winid = winid
   self.bufnr = bufnr
 
-  self:_map(uconf.keymaps.quit, utils.call_wrap_async(self, self.close))
   self:_setup()
 end
 
@@ -82,8 +81,10 @@ end
 
 function Exp:_setup_keymaps()
   local km = uconf.exp.keymaps
+  local gkm = uconf.keymaps
   local call_wrap_async = utils.call_wrap_async
 
+  self:_map(gkm.quit, call_wrap_async(self, self.close))
   self:_map(km.open, call_wrap_async(self, self._open_current_file))
   self:_map(km.next, call_wrap_async(self, self._nav, self.nav.next))
   self:_map(km.prev, call_wrap_async(self, self._nav, self.nav.prev))
