@@ -19,6 +19,8 @@ function Exp:new(fields)
   local e = {
     client = client,
     bufnr = nil,
+    winid = nil,
+    is_win_owned = false,
     nav = Navigator:new(client),
     current = {
       dir = nil,
@@ -46,23 +48,29 @@ function Exp:open_current()
     return
   end
 
+  local winid = api.nvim_get_current_win()
   local bufnr = api.nvim_create_buf(true, true)
-  api.nvim_win_set_buf(0, bufnr)
+
+  api.nvim_win_set_buf(winid, bufnr)
+
+  self.winid = winid
   self.bufnr = bufnr
 
   self:_map(uconf.keymaps.quit, utils.call_wrap_async(self, self.close))
   self:_setup()
 end
 
-function Exp:close(winid)
+function Exp:close()
   local bufnr = self.bufnr
+  local winid = self.winid
 
   if not bufnr then
     return
   end
 
-  if winid then
+  if self.is_win_owned then
     api.nvim_win_close(winid, false)
+    self.winid = nil
   end
 
   api.nvim_buf_clear_namespace(bufnr, self.ns_id, 0, -1)
@@ -73,40 +81,39 @@ function Exp:close(winid)
 end
 
 function Exp:_setup_keymaps()
-  -- local bufnr = self.bufnr
-  -- local km = conf.keymaps
+  local km = uconf.exp.keymaps
+  local call_wrap_async = utils.call_wrap_async
+
+  self:_map(km.open, call_wrap_async(self, self._open_current_file))
+  self:_map(km.next, call_wrap_async(self, self._nav, self.nav.next))
+  self:_map(km.prev, call_wrap_async(self, self._nav, self.nav.prev))
+  self:_map(km.up, call_wrap_async(self, self._nav, self.nav.up))
 end
 
-function Exp:_setup(winid)
+function Exp:_setup()
   local client = self.client
 
   local err = client:start()
   assert(not err, err)
 
   a_util.scheduler()
-  local cwd = vim.fn.getcwd(winid or 0)
+  local cwd = vim.fn.getcwd(self.winid)
 
   local err, dir = client:get_meta { 'Local', cwd }
   assert(not err, vim.inspect(err))
 
-  self:_nav(dir)
+  self:_nav(self.nav.nav, dir)
+  self:_setup_keymaps()
 end
 
-function Exp:_nav(dir)
-  local cur = self.current
-  local bufnr = self.bufnr
-  local ns_id = self.ns_id
+function Exp:_nav(fun, ...)
+  local dir, files = fun(self.nav, ...)
 
-  local dir, files = self.nav:nav(dir)
-
-  cur.dir = dir
-  cur.files = files
-
-  a_util.scheduler()
-
-  for i, f in ipairs(files) do
-    self:_to_line(f):render(bufnr, ns_id, i, i + 1)
+  if not dir or not files then
+    return
   end
+
+  self:_set(dir, files)
 end
 
 function Exp:_map(lhs, rhs)
@@ -135,6 +142,37 @@ function Exp:_to_line(file)
   table.insert(line, Text(fmt.name(file.name), hl.name))
 
   return Line(line)
+end
+
+function Exp:_get_current_file()
+  local index = api.nvim_win_get_cursor(self.winid)[1]
+  return index, self.current.files[index]
+end
+
+function Exp:_open_current_file()
+  local _, file = self:_get_current_file()
+
+  if file.file_type == 'Dir' then
+    self:_nav(self.nav.nav, file)
+  end
+end
+
+function Exp:_set(dir, files)
+  a_util.scheduler()
+
+  local cur = self.current
+  local bufnr = self.bufnr
+  local ns_id = self.ns_id
+
+  api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
+  api.nvim_buf_set_lines(bufnr, 0, -1, true, {})
+
+  for i, f in ipairs(files) do
+    self:_to_line(f):render(bufnr, ns_id, i, i + 1)
+  end
+
+  cur.dir = dir
+  cur.files = files
 end
 
 return Exp

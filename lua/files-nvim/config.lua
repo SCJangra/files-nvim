@@ -5,6 +5,12 @@ local uconf = {
       size = 'FilesNvimExpFileSize',
       name = 'FilesNvimExpFileName',
     },
+    keymaps = {
+      next = 'l',
+      prev = 'h',
+      up = 'H',
+      open = '<CR>',
+    },
   },
   keymaps = {
     quit = 'q',
