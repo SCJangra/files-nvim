@@ -27,14 +27,41 @@ local bytes_to_size = function(bytes)
   end
 end
 
-local wrap = function(fun)
+local call = function(obj, fun, ...)
+  fun(obj, ...)
+end
+
+local call_wrap = function(obj, fun, ...)
+  local params = { ... }
+
   return function()
-    a.run(fun)
+    fun(obj, unpack(params))
+  end
+end
+
+local call_async = function(obj, fun, ...)
+  local params = { ... }
+
+  a.run(function()
+    fun(obj, unpack(params))
+  end)
+end
+
+local call_wrap_async = function(obj, fun, ...)
+  local params = { ... }
+
+  return function()
+    a.run(function()
+      fun(obj, unpack(params))
+    end)
   end
 end
 
 return {
   round = round,
   bytes_to_size = bytes_to_size,
-  wrap = wrap,
+  call = call,
+  call_async = call_async,
+  call_wrap = call_wrap,
+  call_wrap_async = call_wrap_async,
 }

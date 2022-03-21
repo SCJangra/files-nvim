@@ -50,12 +50,7 @@ function Exp:open_current()
   api.nvim_win_set_buf(0, bufnr)
   self.bufnr = bufnr
 
-  self:_map(
-    uconf.keymaps.quit,
-    utils.wrap(function()
-      self:close()
-    end)
-  )
+  self:_map(uconf.keymaps.quit, utils.call_wrap_async(self, self.close))
   self:_setup()
 end
 
