@@ -4,6 +4,7 @@ local uconf = conf.get_config()
 local pconf = conf.pconf
 local utils = require 'files-nvim.utils'
 local Navigator = require 'files-nvim.exp.navigator'
+local Buf = require 'files-nvim.buf'
 
 local keymap = vim.keymap
 local api = vim.api
@@ -12,15 +13,12 @@ local a_util = require 'plenary.async.util'
 local Line = require 'nui.line'
 local Text = require 'nui.text'
 
-local Exp = {}
+local Exp = Buf:new()
 
 function Exp:new(fields)
   local client = Client:new()
   local e = {
     client = client,
-    bufnr = nil,
-    winid = nil,
-    is_win_owned = false,
     nav = Navigator:new(client),
     current = {
       dir = nil,
@@ -37,44 +35,21 @@ function Exp:new(fields)
         end,
       },
     },
-    ns_id = api.nvim_create_namespace '',
   }
 
-  return setmetatable(e, { __index = self })
+  self.__index = self
+
+  return setmetatable(e, self)
 end
 
 function Exp:open_current()
-  if self.bufnr then
-    return
-  end
-
-  local winid = api.nvim_get_current_win()
-  local bufnr = api.nvim_create_buf(true, true)
-
-  api.nvim_win_set_buf(winid, bufnr)
-
-  self.winid = winid
-  self.bufnr = bufnr
+  getmetatable(getmetatable(self).__index).__index.open_current(self)
 
   self:_setup()
 end
 
 function Exp:close()
-  local bufnr = self.bufnr
-  local winid = self.winid
-
-  if not bufnr then
-    return
-  end
-
-  if self.is_win_owned then
-    api.nvim_win_close(winid, false)
-    self.winid = nil
-  end
-
-  api.nvim_buf_clear_namespace(bufnr, self.ns_id, 0, -1)
-  api.nvim_buf_delete(bufnr, { force = true })
-  self.bufnr = nil
+  getmetatable(getmetatable(self).__index).__index.close(self)
 
   self.client:stop()
 end
