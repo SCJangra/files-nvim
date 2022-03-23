@@ -1,3 +1,5 @@
+local a_util = require 'plenary.async.util'
+
 local api = vim.api
 
 local Buf = {}
@@ -19,6 +21,8 @@ function Buf:open_current()
   if self.bufnr then
     return
   end
+
+  a_util.scheduler()
 
   local winid = api.nvim_get_current_win()
   local bufnr = api.nvim_create_buf(true, true)
