@@ -1,12 +1,10 @@
 local Client = require 'files-nvim.client'
 local conf = require 'files-nvim.config'
 local uconf = conf.get_config()
-local pconf = conf.pconf
 local utils = require 'files-nvim.utils'
 local Navigator = require 'files-nvim.exp.navigator'
 local Buf = require 'files-nvim.buf'
 
-local keymap = vim.keymap
 local api = vim.api
 
 local a_util = require 'plenary.async.util'
@@ -59,11 +57,11 @@ function Exp:_setup_keymaps()
   local gkm = uconf.keymaps
   local call_wrap_async = utils.call_wrap_async
 
-  self:_map(gkm.quit, call_wrap_async(self, self.close))
-  self:_map(km.open, call_wrap_async(self, self._open_current_file))
-  self:_map(km.next, call_wrap_async(self, self._nav, self.nav.next))
-  self:_map(km.prev, call_wrap_async(self, self._nav, self.nav.prev))
-  self:_map(km.up, call_wrap_async(self, self._nav, self.nav.up))
+  self:map(gkm.quit, call_wrap_async(self, self.close))
+  self:map(km.open, call_wrap_async(self, self._open_current_file))
+  self:map(km.next, call_wrap_async(self, self._nav, self.nav.next))
+  self:map(km.prev, call_wrap_async(self, self._nav, self.nav.prev))
+  self:map(km.up, call_wrap_async(self, self._nav, self.nav.up))
 end
 
 function Exp:_setup()
@@ -90,12 +88,6 @@ function Exp:_nav(fun, ...)
   end
 
   self:_set(dir, files)
-end
-
-function Exp:_map(lhs, rhs)
-  local opts = vim.tbl_deep_extend('force', pconf.map_opts, { buffer = self.bufnr })
-
-  keymap.set('n', lhs, rhs, opts)
 end
 
 function Exp:_to_line(file)

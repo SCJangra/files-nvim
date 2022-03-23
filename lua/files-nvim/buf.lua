@@ -1,6 +1,9 @@
 local a_util = require 'plenary.async.util'
 
+local pconf = require('files-nvim.config').pconf
+
 local api = vim.api
+local keymap = vim.keymap
 
 local Buf = {}
 
@@ -49,6 +52,12 @@ function Buf:close()
   api.nvim_buf_clear_namespace(bufnr, self.ns_id, 0, -1)
   api.nvim_buf_delete(bufnr, { force = true })
   self.bufnr = nil
+end
+
+function Buf:map(lhs, rhs)
+  local opts = vim.tbl_deep_extend('force', pconf.map_opts, { buffer = self.bufnr })
+
+  keymap.set('n', lhs, rhs, opts)
 end
 
 return Buf
