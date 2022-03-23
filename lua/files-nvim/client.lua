@@ -162,7 +162,17 @@ function Client:subscribe(method, params)
 
   self.nt[sub_id] = sr
 
-  return err, sr
+  local cancel = function()
+    local err, res = self:request(method .. '_c', sub_id)
+
+    if res then
+      self.nt[sub_id] = nil
+    end
+
+    return err, res
+  end
+
+  return err, cancel, sr
 end
 
 function Client:get_meta(id)
