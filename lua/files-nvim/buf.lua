@@ -54,10 +54,10 @@ function Buf:close()
   self.bufnr = nil
 end
 
-function Buf:map(lhs, rhs)
+function Buf:map(modes, lhs, rhs)
   local opts = vim.tbl_deep_extend('force', pconf.map_opts, { buffer = self.bufnr })
 
-  keymap.set('n', lhs, rhs, opts)
+  keymap.set(modes, lhs, rhs, opts)
 end
 
 function Buf:get_sel_range()

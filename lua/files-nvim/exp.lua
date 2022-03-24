@@ -57,11 +57,11 @@ function Exp:_setup_keymaps()
   local gkm = uconf.keymaps
   local call_wrap_async = utils.call_wrap_async
 
-  self:map(gkm.quit, call_wrap_async(self, self.close))
-  self:map(km.open, call_wrap_async(self, self._open_current_file))
-  self:map(km.next, call_wrap_async(self, self._nav, self.nav.next))
-  self:map(km.prev, call_wrap_async(self, self._nav, self.nav.prev))
-  self:map(km.up, call_wrap_async(self, self._nav, self.nav.up))
+  self:map('n', gkm.quit, call_wrap_async(self, self.close))
+  self:map('n', km.open, call_wrap_async(self, self._open_current_file))
+  self:map('n', km.next, call_wrap_async(self, self._nav, self.nav.next))
+  self:map('n', km.prev, call_wrap_async(self, self._nav, self.nav.prev))
+  self:map('n', km.up, call_wrap_async(self, self._nav, self.nav.up))
 end
 
 function Exp:_setup()
