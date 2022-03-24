@@ -60,4 +60,30 @@ function Buf:map(lhs, rhs)
   keymap.set('n', lhs, rhs, opts)
 end
 
+function Buf:get_sel_range()
+  a_util.scheduler()
+
+  local mode = api.nvim_get_mode().mode
+
+  local range = {}
+
+  if mode == 'n' then
+    local line = api.nvim_win_get_cursor(self.winid)[1]
+    table.insert(range, line)
+    table.insert(range, line)
+  elseif mode == 'V' then
+    api.nvim_input '<esc>'
+
+    a_util.scheduler()
+
+    local range_start = api.nvim_buf_get_mark(self.bufnr, '<')[1]
+    local range_end = api.nvim_buf_get_mark(self.bufnr, '>')[1]
+
+    table.insert(range, range_start)
+    table.insert(range, range_end)
+  end
+
+  return range
+end
+
 return Buf
