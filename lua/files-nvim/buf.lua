@@ -74,6 +74,8 @@ function Buf:get_sel_range()
   elseif mode == 'V' then
     api.nvim_input '<esc>'
 
+    -- This second scheduler call is required, because the marks '<' and '>' are
+    -- updated in the next event loop iteration after escaping the visual mode.
     a_util.scheduler()
 
     local range_start = api.nvim_buf_get_mark(self.bufnr, '<')[1]
