@@ -68,7 +68,11 @@ end
 
 function Client:_handle_msg(msg)
   if msg.id then
-    self.res[msg.id](msg.error, msg.result)
+    local err = msg.error
+
+    err = err and string.format('%s. %s', err.message, err.data)
+
+    self.res[msg.id](err, msg.result)
     self.res[msg.id] = nil
     return
   end
@@ -78,7 +82,11 @@ function Client:_handle_msg(msg)
     local nt = self.nt
     local sub_id = params.subscription
 
-    nt[sub_id].s(params.error, params.result)
+    local err = params.error
+
+    err = err and string.format('%s. %s', err.message, err.data)
+
+    nt[sub_id].s(error, params.result)
   end
 end
 
