@@ -86,7 +86,7 @@ function Client:_handle_msg(msg)
 
     err = err and string.format('%s. %s', err.message, err.data)
 
-    nt[sub_id].s(error, params.result)
+    nt[sub_id](err, params.result)
   end
 end
 
@@ -124,7 +124,7 @@ function Client:request(method, params)
   return r()
 end
 
-function Client:subscribe(method, params)
+function Client:subscribe(method, params, on_prog)
   local err, sub_id = self:request(method, params)
 
   if err then
@@ -133,54 +133,24 @@ function Client:subscribe(method, params)
 
   local s, r = channel.oneshot()
 
-  local client = self
-
-  local sr = {
-    s = s,
-    r = r,
-  }
-
-  function sr:recv()
-    local err, res = self.r()
-
-    if res == vim.NIL then
-      client.nt[sub_id] = nil
-      return err, res
-    end
-
-    local s, r = channel.oneshot()
-
-    self.s = s
-    self.r = r
-
-    return err, res
-  end
-
-  function sr:for_each(cb)
-    while true do
-      local err, prog = self:recv()
-
-      if prog == vim.NIL then
-        return
-      end
-
-      cb(err, prog)
-    end
-  end
-
-  self.nt[sub_id] = sr
-
   local cancel = function()
     local err, res = self:request(method .. '_c', sub_id)
 
-    if res then
-      self.nt[sub_id] = nil
-    end
+    self.nt[sub_id] = nil
+    s()
 
     return err, res
   end
 
-  return err, cancel, sr
+  self.nt[sub_id] = function(err, res)
+    if res == vim.NIL then
+      s()
+    else
+      on_prog(err, res)
+    end
+  end
+
+  return err, cancel, r
 end
 
 function Client:get_meta(id)
@@ -215,8 +185,8 @@ function Client:move(id, dest_id)
   return self:request('move', { id, dest_id })
 end
 
-function Client:copy_file(file_id, dest_id)
-  return self:subscribe('copy_file', { file_id, dest_id })
+function Client:copy(files, dst, prog_interval, on_prog)
+  return self:subscribe('copy', { files, dst, prog_interval }, on_prog)
 end
 
 return Client
