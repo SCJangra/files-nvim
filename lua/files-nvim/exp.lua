@@ -46,6 +46,12 @@ function Exp:open_current()
   self:_setup()
 end
 
+function Exp:open_split(rel, pos, size)
+  getmetatable(getmetatable(self).__index).__index.open_split(self, rel, pos, size)
+
+  self:_setup()
+end
+
 function Exp:close()
   getmetatable(getmetatable(self).__index).__index.close(self)
 
@@ -74,7 +80,7 @@ function Exp:_setup()
   local cwd = vim.fn.getcwd(self.winid)
 
   local err, dir = client:get_meta { 'Local', cwd }
-  assert(not err, vim.inspect(err))
+  assert(not err, err)
 
   self:_nav(self.nav.nav, dir)
   self:_setup_keymaps()

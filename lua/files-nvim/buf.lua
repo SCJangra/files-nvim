@@ -1,6 +1,7 @@
 local a_util = require 'plenary.async.util'
 
 local pconf = require('files-nvim.config').pconf
+local split = require 'files-nvim.utils.split'
 
 local api = vim.api
 local keymap = vim.keymap
@@ -31,6 +32,29 @@ function Buf:open_current()
   local bufnr = api.nvim_create_buf(true, true)
 
   api.nvim_win_set_buf(winid, bufnr)
+
+  self.winid = winid
+  self.bufnr = bufnr
+end
+
+function Buf:open_split(rel, pos, size)
+  if self.bufnr then
+    return
+  end
+
+  a_util.scheduler()
+  local bufnr = api.nvim_create_buf(false, true)
+  local winid
+
+  if type(rel) == 'number' then
+    winid = split.win[pos](size, rel, bufnr)
+  elseif rel == 'win' then
+    winid = split.win[pos](size, 0, bufnr)
+  elseif rel == 'editor' then
+    winid = split.editor[pos](size, bufnr)
+  else
+    assert(false, "Invalid value for 'rel'")
+  end
 
   self.winid = winid
   self.bufnr = bufnr
