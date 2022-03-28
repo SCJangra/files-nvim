@@ -1,5 +1,7 @@
 local a = require 'plenary.async'
 
+local api = vim.api
+
 local round = function(num, idp)
   return tonumber(string.format('%.' .. (idp or 0) .. 'f', num))
 end
@@ -57,6 +59,10 @@ local call_wrap_async = function(obj, fun, ...)
   end
 end
 
+local percent = function(val, of)
+  return (of / 100) * val
+end
+
 return {
   round = round,
   bytes_to_size = bytes_to_size,
@@ -64,4 +70,5 @@ return {
   call_async = call_async,
   call_wrap = call_wrap,
   call_wrap_async = call_wrap_async,
+  percent = percent,
 }
