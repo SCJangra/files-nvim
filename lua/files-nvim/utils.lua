@@ -1,7 +1,5 @@
 local a = require 'plenary.async'
 
-local api = vim.api
-
 local round = function(num, idp)
   return tonumber(string.format('%.' .. (idp or 0) .. 'f', num))
 end
@@ -15,17 +13,17 @@ local bytes_to_size = function(bytes)
   local terabyte = gigabyte * 1024
 
   if (bytes >= 0) and (bytes < kilobyte) then
-    return bytes, ' B'
+    return bytes .. '  B'
   elseif (bytes >= kilobyte) and (bytes < megabyte) then
-    return round(bytes / kilobyte, precision), 'KB'
+    return round(bytes / kilobyte, precision) .. ' KB'
   elseif (bytes >= megabyte) and (bytes < gigabyte) then
-    return round(bytes / megabyte, precision), 'MB'
+    return round(bytes / megabyte, precision) .. ' MB'
   elseif (bytes >= gigabyte) and (bytes < terabyte) then
-    return round(bytes / gigabyte, precision), 'GB'
+    return round(bytes / gigabyte, precision) .. ' GB'
   elseif bytes >= terabyte then
-    return round(bytes / terabyte, precision), 'TB'
+    return round(bytes / terabyte, precision) .. ' TB'
   else
-    return bytes, ' B'
+    return bytes .. '  B'
   end
 end
 

@@ -60,7 +60,7 @@ function Navigator:up()
   end
 
   local err, dir = self.client:get_meta(dir.parent_id)
-  assert(not err, vim.inspect(err))
+  assert(not err, err)
 
   return self:nav(dir)
 end
@@ -70,7 +70,7 @@ function Navigator:_nav(new_index)
   local dir = h.dirs[new_index]
 
   local err, files = self.client:list_meta(dir.id)
-  assert(not err, vim.inspect(err))
+  assert(not err, err)
 
   h.index = new_index
 

@@ -4,12 +4,17 @@ local uconf = {
     hl = {
       size = 'FilesNvimExpFileSize',
       name = 'FilesNvimExpFileName',
+      prog_key = 'FilesNvimProgKey',
+      prog_val = 'FilesNvimProgVal',
     },
     keymaps = {
       next = 'l',
       prev = 'h',
       up = 'H',
       open = '<CR>',
+      copy = 'y',
+      paste = 'p',
+      show_tasks_split = 'ts',
     },
   },
   keymaps = {
