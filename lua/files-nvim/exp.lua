@@ -166,6 +166,30 @@ function Exp:_set(dir, files)
   cur.files = files
 end
 
+function Exp:_refresh()
+  local dir = self.current.dir
+  local winid = self.winid
+
+  local err, files = self.client:list_meta(dir.id)
+  assert(not err, err)
+
+  a_util.scheduler()
+
+  local cursor_pos = api.nvim_win_get_cursor(winid)
+
+  self:_set(dir, files)
+
+  api.nvim_win_set_cursor(winid, cursor_pos)
+end
+
+function Exp:_insert_line(file)
+  local files = self.current.files
+  table.insert(files, file)
+  local i = #files
+
+  self:_to_line(file):render(self.bufnr, self.ns_id, i, i + 1)
+end
+
 function Exp:_copy_to_cb(action)
   local cur_files = self.current.files
   local cb = self.cb
@@ -185,11 +209,29 @@ function Exp:_paste()
   local cb = self.cb
   local task = self.task
   local current = self.current
+  local current_dir_id = current.dir.id
+  local call_async = utils.call_async
+  local is_id_equal = utils.is_id_equal
 
   if cb.action == CbAction.Copy then
-    task:copy(cb.files, current.dir)
+    task:copy(cb.files, current.dir, nil, function()
+      if not is_id_equal(current_dir_id, current.dir.id) then
+        print 'Not in dir'
+        return
+      end
+
+      call_async(self, self._refresh)
+    end)
   elseif cb.action == CbAction.Move then
-    task:move(cb.files, current.dir)
+    task:move(cb.files, current.dir, function(file)
+      if not is_id_equal(current_dir_id, current.dir.id) then
+        return
+      end
+
+      vim.schedule(function()
+        self:_insert_line(file)
+      end)
+    end)
   end
 end
 

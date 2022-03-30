@@ -51,12 +51,12 @@ function Task:run(task)
   self:_remove_task(t)
 end
 
-function Task:copy(files, dst, prog_interval)
-  return self:run(self.tg:copy(files, dst, prog_interval))
+function Task:copy(files, dst, prog_interval, on_prog)
+  return self:run(self.tg:copy(files, dst, prog_interval, on_prog))
 end
 
-function Task:move(files, dst)
-  return self:run(self.tg:move(files, dst))
+function Task:move(files, dst, on_prog)
+  return self:run(self.tg:move(files, dst, on_prog))
 end
 
 function Task:_setup_keymaps()

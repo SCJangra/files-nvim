@@ -61,6 +61,10 @@ local percent = function(val, of)
   return (of / 100) * val
 end
 
+local is_id_equal = function(id1, id2)
+  return id1[1] == id2[1] and id1[2] == id2[2]
+end
+
 return {
   round = round,
   bytes_to_size = bytes_to_size,
@@ -69,4 +73,5 @@ return {
   call_wrap = call_wrap,
   call_wrap_async = call_wrap_async,
   percent = percent,
+  is_id_equal = is_id_equal,
 }

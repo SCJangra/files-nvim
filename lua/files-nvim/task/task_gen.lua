@@ -58,13 +58,14 @@ function TaskGen:new(client)
   return setmetatable(tg, self)
 end
 
-function TaskGen:copy(files, dst, prog_interval)
+function TaskGen:copy(files, dst, prog_interval, on_prog)
   return {
     message = string.format('Copy %d items to %s', #files, dst.name),
-    run = function(on_prog)
+    run = function(on_prog1)
       local err, cancel, wait = self.client:copy(files, dst, prog_interval, function(err, prog)
         assert(not err, err)
-        on_prog(lines.copy(prog))
+        on_prog(prog)
+        on_prog1(lines.copy(prog))
       end)
 
       assert(not err, err)
@@ -73,14 +74,14 @@ function TaskGen:copy(files, dst, prog_interval)
   }
 end
 
-function TaskGen:move(files, dst)
+function TaskGen:move(files, dst, on_prog)
   local total = #files
   local done = 0
 
   return {
     message = string.format('Move %d items to %s', #files, dst.name),
-    run = function(on_prog)
-      local err, cancel, wait = self.client:move(files, dst, function(err, _)
+    run = function(on_prog1)
+      local err, cancel, wait = self.client:move(files, dst, function(err, m)
         if err then
           vim.schedule(function()
             notify(err, l.ERROR)
@@ -89,7 +90,8 @@ function TaskGen:move(files, dst)
         end
 
         done = done + 1
-        on_prog(lines.move(total, done))
+        on_prog(m)
+        on_prog1(lines.move(total, done))
       end)
 
       assert(not err, err)
