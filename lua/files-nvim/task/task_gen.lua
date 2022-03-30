@@ -1,6 +1,9 @@
 local hl = require('files-nvim.config').get_config().exp.hl
 local utils = require 'files-nvim.utils'
 
+local l = vim.log.levels
+local notify = vim.notify
+
 local lines = {
   copy = function(prog)
     local f = prog.files
@@ -31,6 +34,18 @@ local lines = {
 
     return l
   end,
+  move = function(total, done)
+    local prog_key = hl.prog_key
+    local prog_val = hl.prog_val
+
+    local l = {
+      {
+        { '  Progress: ', prog_key },
+        { string.format('%d / %d', done, total), prog_val },
+      },
+    }
+    return l
+  end,
 }
 
 local TaskGen = {}
@@ -43,25 +58,44 @@ function TaskGen:new(client)
   return setmetatable(tg, self)
 end
 
-function TaskGen:_task(name, args)
-  local t = {}
-  t.run = function(on_prog)
-    local err, cancel, wait = self.client.subscribe(self.client, name, args, function(err, prog)
+function TaskGen:copy(files, dst, prog_interval)
+  return {
+    message = string.format('Copy %d items to %s', #files, dst.name),
+    run = function(on_prog)
+      local err, cancel, wait = self.client:copy(files, dst, prog_interval, function(err, prog)
+        assert(not err, err)
+        on_prog(lines.copy(prog))
+      end)
+
       assert(not err, err)
-      on_prog(lines.copy(prog))
-    end)
-    assert(not err, err)
-
-    return cancel, wait
-  end
-
-  return t
+      return cancel, wait
+    end,
+  }
 end
 
-function TaskGen:copy(files, dst, prog_interval)
-  local t = self:_task('copy', { files, dst, prog_interval })
-  t.message = string.format('Copy %d items to %s', #files, dst.name)
-  return t
+function TaskGen:move(files, dst)
+  local total = #files
+  local done = 0
+
+  return {
+    message = string.format('Move %d items to %s', #files, dst.name),
+    run = function(on_prog)
+      local err, cancel, wait = self.client:move(files, dst, function(err, _)
+        if err then
+          vim.schedule(function()
+            notify(err, l.ERROR)
+          end)
+          return
+        end
+
+        done = done + 1
+        on_prog(lines.move(total, done))
+      end)
+
+      assert(not err, err)
+      return cancel, wait
+    end,
+  }
 end
 
 return TaskGen

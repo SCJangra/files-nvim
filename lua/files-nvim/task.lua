@@ -55,6 +55,10 @@ function Task:copy(files, dst, prog_interval)
   return self:run(self.tg:copy(files, dst, prog_interval))
 end
 
+function Task:move(files, dst)
+  return self:run(self.tg:move(files, dst))
+end
+
 function Task:_setup_keymaps()
   local gkm = uconf.keymaps
   local call_wrap_async = utils.call_wrap_async

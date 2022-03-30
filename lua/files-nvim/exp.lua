@@ -14,6 +14,7 @@ local Text = require 'nui.text'
 
 local CbAction = {
   Copy = 0,
+  Move = 1,
 }
 
 local Exp = Buf:new()
@@ -80,7 +81,8 @@ function Exp:_setup_keymaps()
   self:map('n', km.next, call_wrap_async(self, self._nav, self.nav.next))
   self:map('n', km.prev, call_wrap_async(self, self._nav, self.nav.prev))
   self:map('n', km.up, call_wrap_async(self, self._nav, self.nav.up))
-  self:map({ 'n', 'x' }, km.copy, call_wrap_async(self, self._copy_to_cb))
+  self:map({ 'n', 'x' }, km.copy, call_wrap_async(self, self._copy_to_cb, CbAction.Copy))
+  self:map({ 'n', 'x' }, km.move, call_wrap_async(self, self._copy_to_cb, CbAction.Move))
   self:map('n', km.paste, call_wrap_async(self, self._paste))
   self:map('n', km.show_tasks_split, call_wrap_async(self.task, self.task.open_split, 0, 'right', 40))
 end
@@ -164,12 +166,11 @@ function Exp:_set(dir, files)
   cur.files = files
 end
 
-function Exp:_copy_to_cb()
+function Exp:_copy_to_cb(action)
   local cur_files = self.current.files
   local cb = self.cb
 
   local range = self:get_sel_range()
-  local action = CbAction.Copy
   local files = {}
 
   for i = range[1], range[2] do
@@ -187,6 +188,8 @@ function Exp:_paste()
 
   if cb.action == CbAction.Copy then
     task:copy(cb.files, current.dir)
+  elseif cb.action == CbAction.Move then
+    task:move(cb.files, current.dir)
   end
 end
 

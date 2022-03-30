@@ -181,12 +181,16 @@ function Client:rename(id, new_name)
   return self:request('rename', { id, new_name })
 end
 
-function Client:move(id, dest_id)
+function Client:move_file(id, dest_id)
   return self:request('move', { id, dest_id })
 end
 
 function Client:copy(files, dst, prog_interval, on_prog)
   return self:subscribe('copy', { files, dst, prog_interval }, on_prog)
+end
+
+function Client:move(files, dst, on_prog)
+  return self:subscribe('move', { files, dst }, on_prog)
 end
 
 return Client

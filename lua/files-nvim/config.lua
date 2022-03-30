@@ -13,6 +13,7 @@ local uconf = {
       up = 'H',
       open = '<CR>',
       copy = 'y',
+      move = 'x',
       paste = 'p',
       show_tasks_split = 'ts',
     },
