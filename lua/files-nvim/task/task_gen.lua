@@ -35,16 +35,20 @@ local lines = {
     return l
   end,
   move = function(total, done)
-    local prog_key = hl.prog_key
-    local prog_val = hl.prog_val
-
-    local l = {
+    return {
       {
-        { '  Progress: ', prog_key },
-        { string.format('%d / %d', done, total), prog_val },
+        { '  Progress: ', hl.prog_key },
+        { string.format('%d / %d', done, total), hl.prog_val },
       },
     }
-    return l
+  end,
+  delete = function(prog)
+    return {
+      {
+        { '  Progress: ', hl.prog_key },
+        { string.format('%d / %d', prog.done, prog.total), hl.prog_val },
+      },
+    }
   end,
 }
 
@@ -92,6 +96,28 @@ function TaskGen:move(files, dst, on_prog)
         done = done + 1
         on_prog(m)
         on_prog1(lines.move(total, done))
+      end)
+
+      assert(not err, err)
+      return cancel, wait
+    end,
+  }
+end
+
+function TaskGen:delete(files, on_prog)
+  return {
+    message = string.format('Delete %d items', #files),
+    run = function(on_prog1)
+      local err, cancel, wait = self.client:delete(files, function(err, prog)
+        if err then
+          vim.schedule(function()
+            notify(err, l.ERROR)
+          end)
+          return
+        end
+
+        on_prog(prog)
+        on_prog1(lines.delete(prog))
       end)
 
       assert(not err, err)

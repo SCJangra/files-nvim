@@ -15,6 +15,7 @@ local uconf = {
       copy = 'y',
       move = 'x',
       paste = 'p',
+      delete = 'd',
       show_tasks_split = 'ts',
     },
   },

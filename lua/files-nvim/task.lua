@@ -59,6 +59,10 @@ function Task:move(files, dst, on_prog)
   return self:run(self.tg:move(files, dst, on_prog))
 end
 
+function Task:delete(files, on_prog)
+  return self:run(self.tg:delete(files, on_prog))
+end
+
 function Task:_setup_keymaps()
   local gkm = uconf.keymaps
   local call_wrap_async = utils.call_wrap_async

@@ -193,4 +193,8 @@ function Client:move(files, dst, on_prog)
   return self:subscribe('move', { files, dst }, on_prog)
 end
 
+function Client:delete(files, on_prog)
+  return self:subscribe('delete', { files }, on_prog)
+end
+
 return Client

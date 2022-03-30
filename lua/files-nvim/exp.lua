@@ -83,6 +83,7 @@ function Exp:_setup_keymaps()
   self:map('n', km.up, call_wrap_async(self, self._nav, self.nav.up))
   self:map({ 'n', 'x' }, km.copy, call_wrap_async(self, self._copy_to_cb, CbAction.Copy))
   self:map({ 'n', 'x' }, km.move, call_wrap_async(self, self._copy_to_cb, CbAction.Move))
+  self:map({ 'n', 'x' }, km.delete, call_wrap_async(self, self._del_sel_files))
   self:map('n', km.paste, call_wrap_async(self, self._paste))
   self:map('n', km.show_tasks_split, call_wrap_async(self.task, self.task.open_split, 0, 'right', 40))
 end
@@ -179,7 +180,13 @@ function Exp:_refresh()
 
   self:_set(dir, files)
 
-  api.nvim_win_set_cursor(winid, cursor_pos)
+  local line_count = api.nvim_buf_line_count(self.bufnr)
+
+  if cursor_pos[1] <= line_count then
+    api.nvim_win_set_cursor(winid, cursor_pos)
+  else
+    api.nvim_win_set_cursor(winid, { line_count, cursor_pos[2] })
+  end
 end
 
 function Exp:_insert_line(file)
@@ -190,9 +197,8 @@ function Exp:_insert_line(file)
   self:_to_line(file):render(self.bufnr, self.ns_id, i, i + 1)
 end
 
-function Exp:_copy_to_cb(action)
+function Exp:_get_sel_files()
   local cur_files = self.current.files
-  local cb = self.cb
 
   local range = self:get_sel_range()
   local files = {}
@@ -200,6 +206,35 @@ function Exp:_copy_to_cb(action)
   for i = range[1], range[2] do
     table.insert(files, cur_files[i])
   end
+
+  return files
+end
+
+function Exp:_del_sel_files()
+  local files = self:_get_sel_files()
+  local is_id_equal = utils.is_id_equal
+  local current = self.current
+  local current_dir_id = current.dir.id
+
+  a_util.scheduler()
+
+  local choice = vim.fn.confirm(string.format('Delete %d items?', #files), 'Yes\nNo', 2)
+
+  if not choice == 1 then
+    return
+  end
+
+  self.task:delete(files, function(_) end)
+
+  if is_id_equal(current_dir_id, current.dir.id) then
+    self:_refresh()
+  end
+end
+
+function Exp:_copy_to_cb(action)
+  local cb = self.cb
+
+  local files = self:_get_sel_files()
 
   cb.action = action
   cb.files = files
@@ -216,7 +251,6 @@ function Exp:_paste()
   if cb.action == CbAction.Copy then
     task:copy(cb.files, current.dir, nil, function()
       if not is_id_equal(current_dir_id, current.dir.id) then
-        print 'Not in dir'
         return
       end
 
