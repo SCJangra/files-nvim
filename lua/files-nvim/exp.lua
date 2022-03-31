@@ -74,18 +74,29 @@ end
 function Exp:_setup_keymaps()
   local km = uconf.exp.keymaps
   local gkm = uconf.keymaps
-  local call_wrap_async = utils.call_wrap_async
+  local cwa = utils.call_wrap_async
 
-  self:map('n', gkm.quit, call_wrap_async(self, self.close))
-  self:map('n', km.open, call_wrap_async(self, self._open_current_file))
-  self:map('n', km.next, call_wrap_async(self, self._nav, self.nav.next))
-  self:map('n', km.prev, call_wrap_async(self, self._nav, self.nav.prev))
-  self:map('n', km.up, call_wrap_async(self, self._nav, self.nav.up))
-  self:map({ 'n', 'x' }, km.copy, call_wrap_async(self, self._copy_to_cb, CbAction.Copy))
-  self:map({ 'n', 'x' }, km.move, call_wrap_async(self, self._copy_to_cb, CbAction.Move))
-  self:map({ 'n', 'x' }, km.delete, call_wrap_async(self, self._del_sel_files))
-  self:map('n', km.paste, call_wrap_async(self, self._paste))
-  self:map('n', km.show_tasks_split, call_wrap_async(self.task, self.task.open_split, 0, 'right', 40))
+  self:map('n', gkm.quit, cwa(self, self.close))
+  self:map('n', km.open, cwa(self, self._open_current_file))
+  self:map('n', km.next, cwa(self, self._nav, self.nav.next))
+  self:map('n', km.prev, cwa(self, self._nav, self.nav.prev))
+  self:map('n', km.up, cwa(self, self._nav, self.nav.up))
+  self:map({ 'n', 'x' }, km.copy, cwa(self, self._action, self._copy_to_cb, 'Never', { CbAction.Copy }))
+  self:map({ 'n', 'x' }, km.move, cwa(self, self._action, self._copy_to_cb, 'Never', { CbAction.Move }))
+  self:map({ 'n', 'x' }, km.delete, cwa(self, self._action, self._del_sel_files, 'Done'))
+  self:map(
+    'n',
+    km.paste,
+    cwa(self, self._action, self._paste, function()
+      local action = self.cb.action
+      if action == CbAction.Copy then
+        return 'Progress'
+      elseif action == CbAction.Move then
+        return 'Done'
+      end
+    end)
+  )
+  self:map('n', km.show_tasks_split, cwa(self.task, self.task.open_split, 0, 'right', 40))
 end
 
 function Exp:_setup()
@@ -189,14 +200,6 @@ function Exp:_refresh()
   end
 end
 
-function Exp:_insert_line(file)
-  local files = self.current.files
-  table.insert(files, file)
-  local i = #files
-
-  self:_to_line(file):render(self.bufnr, self.ns_id, i, i + 1)
-end
-
 function Exp:_get_sel_files()
   local cur_files = self.current.files
 
@@ -211,24 +214,16 @@ function Exp:_get_sel_files()
 end
 
 function Exp:_del_sel_files()
-  local files = self:_get_sel_files()
-  local is_id_equal = utils.is_id_equal
-  local current = self.current
-  local current_dir_id = current.dir.id
-
   a_util.scheduler()
 
+  local files = self:_get_sel_files()
   local choice = vim.fn.confirm(string.format('Delete %d items?', #files), 'Yes\nNo', 2)
 
-  if not choice == 1 then
+  if choice ~= 1 then
     return
   end
 
-  self.task:delete(files, function(_) end)
-
-  if is_id_equal(current_dir_id, current.dir.id) then
-    self:_refresh()
-  end
+  self.task:delete(files)
 end
 
 function Exp:_copy_to_cb(action)
@@ -240,32 +235,47 @@ function Exp:_copy_to_cb(action)
   cb.files = files
 end
 
-function Exp:_paste()
+function Exp:_paste(on_prog)
   local cb = self.cb
   local task = self.task
-  local current = self.current
-  local current_dir_id = current.dir.id
-  local call_async = utils.call_async
-  local is_id_equal = utils.is_id_equal
+  local dir = self.current.dir
 
   if cb.action == CbAction.Copy then
-    task:copy(cb.files, current.dir, nil, function()
-      if not is_id_equal(current_dir_id, current.dir.id) then
-        return
-      end
-
-      call_async(self, self._refresh)
-    end)
+    task:copy(cb.files, dir, nil, on_prog)
   elseif cb.action == CbAction.Move then
-    task:move(cb.files, current.dir, function(file)
-      if not is_id_equal(current_dir_id, current.dir.id) then
-        return
-      end
+    task:move(cb.files, dir, on_prog)
+  end
+end
 
-      vim.schedule(function()
-        self:_insert_line(file)
-      end)
-    end)
+function Exp:_action(fn, update_on, args)
+  local c = self.current
+  local c_dir_id = c.dir.id
+  local is_id_equal = utils.is_id_equal
+  local call_async = utils.call_async
+  local args = args or {}
+
+  local pfn = function()
+    if not is_id_equal(c_dir_id, c.dir.id) then
+      return
+    end
+
+    call_async(self, self._refresh)
+  end
+
+  if type(update_on) == 'function' then
+    update_on = update_on()
+  end
+
+  if update_on == 'Progress' then
+    table.insert(args, pfn)
+    fn(self, unpack(args))
+  elseif update_on == 'Done' then
+    fn(self, unpack(args))
+    if is_id_equal(c_dir_id, c.dir.id) then
+      self:_refresh()
+    end
+  elseif update_on == 'Never' then
+    fn(self, unpack(args))
   end
 end
 
