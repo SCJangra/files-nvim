@@ -5,6 +5,7 @@ local TaskGen = require 'files-nvim.task.task_gen'
 local conf = require 'files-nvim.config'
 local uconf = conf.get_config()
 local utils = require 'files-nvim.utils'
+local async_wrap = utils.async_wrap
 
 local api = vim.api
 
@@ -65,9 +66,8 @@ end
 
 function Task:_setup_keymaps()
   local gkm = uconf.keymaps
-  local call_wrap_async = utils.call_wrap_async
 
-  self:map('n', gkm.quit, call_wrap_async(self, self.close))
+  self:map('n', gkm.quit, async_wrap(self.close, self))
 end
 
 function Task:_insert_task(t)

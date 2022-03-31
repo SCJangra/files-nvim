@@ -1,4 +1,5 @@
 local a = require 'plenary.async'
+local run = require('plenary.async').run
 
 local round = function(num, idp)
   return tonumber(string.format('%.' .. (idp or 0) .. 'f', num))
@@ -27,36 +28,6 @@ local bytes_to_size = function(bytes)
   end
 end
 
-local call = function(obj, fun, ...)
-  fun(obj, ...)
-end
-
-local call_wrap = function(obj, fun, ...)
-  local params = { ... }
-
-  return function()
-    fun(obj, unpack(params))
-  end
-end
-
-local call_async = function(obj, fun, ...)
-  local params = { ... }
-
-  a.run(function()
-    fun(obj, unpack(params))
-  end)
-end
-
-local call_wrap_async = function(obj, fun, ...)
-  local params = { ... }
-
-  return function()
-    a.run(function()
-      fun(obj, unpack(params))
-    end)
-  end
-end
-
 local percent = function(val, of)
   return (of / 100) * val
 end
@@ -65,13 +36,46 @@ local is_id_equal = function(id1, id2)
   return id1[1] == id2[1] and id1[2] == id2[2]
 end
 
+local async = function(fun, ...)
+  local args = { ... }
+
+  run(function()
+    fun(unpack(args))
+  end)
+end
+
+local wrap = function(fun, ...)
+  local a0 = { ... }
+  return function(...)
+    local a1 = { ... }
+    for _, v in ipairs(a1) do
+      table.insert(a0, v)
+    end
+
+    fun(unpack(a0))
+  end
+end
+
+local async_wrap = function(fun, ...)
+  local a0 = { ... }
+  return function(...)
+    local a1 = { ... }
+    for _, v in ipairs(a1) do
+      table.insert(a0, v)
+    end
+
+    run(function()
+      fun(unpack(a0))
+    end)
+  end
+end
+
 return {
   round = round,
   bytes_to_size = bytes_to_size,
-  call = call,
-  call_async = call_async,
-  call_wrap = call_wrap,
-  call_wrap_async = call_wrap_async,
   percent = percent,
   is_id_equal = is_id_equal,
+  async = async,
+  wrap = wrap,
+  async_wrap = async_wrap,
 }

@@ -16,7 +16,25 @@ local uconf = {
       move = 'x',
       paste = 'p',
       delete = 'd',
+      rename = 'r',
       show_tasks_split = 'ts',
+    },
+    input_opts = {
+      rename = {
+        relative = 'cursor',
+        position = {
+          row = 1,
+          col = 0,
+        },
+        size = '80%',
+        border = {
+          style = 'rounded',
+          text = {
+            top = ' Rename ',
+            top_align = 'left',
+          },
+        },
+      },
     },
   },
   keymaps = {

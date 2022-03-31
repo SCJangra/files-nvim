@@ -1,7 +1,14 @@
 local Client = require 'files-nvim.client'
+
 local conf = require 'files-nvim.config'
 local uconf = conf.get_config()
+local exp = uconf.exp
+local input_opts = exp.input_opts
+
 local utils = require 'files-nvim.utils'
+local async_wrap = utils.async_wrap
+local wrap = utils.wrap
+local async = utils.async
 local Navigator = require 'files-nvim.exp.navigator'
 local Buf = require 'files-nvim.buf'
 local Task = require 'files-nvim.task'
@@ -11,6 +18,7 @@ local api = vim.api
 local a_util = require 'plenary.async.util'
 local Line = require 'nui.line'
 local Text = require 'nui.text'
+local Input = require 'nui.input'
 
 local CbAction = {
   Copy = 0,
@@ -72,22 +80,22 @@ function Exp:close()
 end
 
 function Exp:_setup_keymaps()
-  local km = uconf.exp.keymaps
+  local km = exp.keymaps
   local gkm = uconf.keymaps
-  local cwa = utils.call_wrap_async
 
-  self:map('n', gkm.quit, cwa(self, self.close))
-  self:map('n', km.open, cwa(self, self._open_current_file))
-  self:map('n', km.next, cwa(self, self._nav, self.nav.next))
-  self:map('n', km.prev, cwa(self, self._nav, self.nav.prev))
-  self:map('n', km.up, cwa(self, self._nav, self.nav.up))
-  self:map({ 'n', 'x' }, km.copy, cwa(self, self._action, self._copy_to_cb, 'Never', { CbAction.Copy }))
-  self:map({ 'n', 'x' }, km.move, cwa(self, self._action, self._copy_to_cb, 'Never', { CbAction.Move }))
-  self:map({ 'n', 'x' }, km.delete, cwa(self, self._action, self._del_sel_files, 'Done'))
+  self:map('n', gkm.quit, async_wrap(self.close, self))
+  self:map('n', km.open, async_wrap(self._open_current_file, self))
+  self:map('n', km.next, async_wrap(self._nav, self, self.nav.next))
+  self:map('n', km.prev, async_wrap(self._nav, self, self.nav.prev))
+  self:map('n', km.up, async_wrap(self._nav, self, self.nav.up))
+  self:map({ 'n', 'x' }, km.copy, async_wrap(self._action, self, wrap(self._copy_to_cb, self, CbAction.Copy), 'Never'))
+  self:map({ 'n', 'x' }, km.move, async_wrap(self._action, self, wrap(self._copy_to_cb, self, CbAction.Move), 'Never'))
+  self:map({ 'n', 'x' }, km.delete, async_wrap(self._action, self, wrap(self._del_sel_files, self), 'Done'))
+  self:map({ 'n', 'x' }, km.rename, wrap(self._show_rename_dialog, self))
   self:map(
-    'n',
+    { 'n', 'x' },
     km.paste,
-    cwa(self, self._action, self._paste, function()
+    async_wrap(self._action, self, wrap(self._paste, self), function()
       local action = self.cb.action
       if action == CbAction.Copy then
         return 'Progress'
@@ -96,7 +104,7 @@ function Exp:_setup_keymaps()
       end
     end)
   )
-  self:map('n', km.show_tasks_split, cwa(self.task, self.task.open_split, 0, 'right', 40))
+  self:map('n', km.show_tasks_split, async_wrap(self.task.open_split, self.task, 0, 'right', 40))
 end
 
 function Exp:_setup()
@@ -247,19 +255,17 @@ function Exp:_paste(on_prog)
   end
 end
 
-function Exp:_action(fn, update_on, args)
+function Exp:_action(fn, update_on)
   local c = self.current
   local c_dir_id = c.dir.id
   local is_id_equal = utils.is_id_equal
-  local call_async = utils.call_async
-  local args = args or {}
 
   local pfn = function()
     if not is_id_equal(c_dir_id, c.dir.id) then
       return
     end
 
-    call_async(self, self._refresh)
+    async(self._refresh, self)
   end
 
   if type(update_on) == 'function' then
@@ -267,16 +273,34 @@ function Exp:_action(fn, update_on, args)
   end
 
   if update_on == 'Progress' then
-    table.insert(args, pfn)
-    fn(self, unpack(args))
+    fn(pfn)
   elseif update_on == 'Done' then
-    fn(self, unpack(args))
+    fn()
     if is_id_equal(c_dir_id, c.dir.id) then
       self:_refresh()
     end
   elseif update_on == 'Never' then
-    fn(self, unpack(args))
+    fn()
   end
+end
+
+function Exp:_show_rename_dialog()
+  local _, file = self:_get_current_file()
+
+  local i = Input(input_opts.rename, {
+    prompt = '',
+    default_value = file.name,
+    on_submit = function(new_name)
+      async(self._action, self, wrap(self._rename, self, file, new_name), 'Done')
+    end,
+  })
+
+  i:mount()
+end
+
+function Exp:_rename(file, new_name)
+  local err, _ = self.client:rename(file.id, new_name)
+  assert(not err, err)
 end
 
 return Exp
