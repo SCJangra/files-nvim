@@ -1,20 +1,24 @@
 local a_util = require 'plenary.async.util'
 
 local Buf = require 'files-nvim.buf'
-local TaskGen = require 'files-nvim.task.task_gen'
 local conf = require 'files-nvim.config'
 local uconf = conf.get_config()
 local utils = require 'files-nvim.utils'
 local async_wrap = utils.async_wrap
+local event = require 'files-nvim.event'
+local lines = require 'files-nvim.task.prog_lines'
 
 local api = vim.api
+local notify = vim.notify
+local l = vim.log.levels
+local schedule = vim.schedule
 
 local Task = Buf:new()
 
 function Task:new(client)
   local t = {
     tasks = {},
-    tg = TaskGen:new(client),
+    client = client,
   }
   self.__index = self
   return setmetatable(t, self)
@@ -34,34 +38,61 @@ function Task:open_split(rel, pos, size)
   self:_show_tasks()
 end
 
-function Task:run(task)
+function Task:_run(msg, method, ...)
+  local m_start = method .. '_start'
+  local m_prog = method .. '_prog'
+  local m_end = method .. '_end'
+
   local t = {
-    message = task.message,
+    message = msg,
   }
 
-  local cancel, wait = task.run(function(lines)
-    self:_show_prog(t, lines)
+  local args
+  if method == 'delete' then
+    args = { ... }
+    args[#args] = nil
+  else
+    args = { ... }
+  end
+
+  local err, id, cancel, wait
+  err, id, cancel, wait = self.client:subscribe(method, args, function(err, res)
+    if err then
+      schedule(function()
+        notify(err, l.ERROR)
+      end)
+      return
+    end
+
+    event:broadcast(m_prog, id, res)
+    self:_show_prog(t, lines[method](res))
   end)
+  assert(not err, err)
 
   t.cancel = cancel
 
+  event:broadcast(m_start, id, ...)
   self:_insert_task(t)
 
   wait()
 
+  event:broadcast(m_end, id)
   self:_remove_task(t)
 end
 
-function Task:copy(files, dst, prog_interval, on_prog)
-  return self:run(self.tg:copy(files, dst, prog_interval, on_prog))
+function Task:copy(files, dst, prog_interval)
+  local msg = string.format('Copy %d items to %s', #files, dst.name)
+  self:_run(msg, 'copy', files, dst, prog_interval)
 end
 
-function Task:move(files, dst, on_prog)
-  return self:run(self.tg:move(files, dst, on_prog))
+function Task:move(files, dst)
+  local msg = string.format('Move %d items to %s', #files, dst.name)
+  self:_run(msg, 'move', files, dst)
 end
 
-function Task:delete(files, on_prog)
-  return self:run(self.tg:delete(files, on_prog))
+function Task:delete(files, dir)
+  local msg = string.format('Move %d items from %s', #files, dir.name)
+  self:_run(msg, 'delete', files, dir)
 end
 
 function Task:_setup_keymaps()
@@ -137,14 +168,14 @@ function Task:_show_prog(t, lines)
     return
   end
 
-  a_util.scheduler()
+  schedule(function()
+    local em = api.nvim_buf_get_extmark_by_id(bufnr, ns_id, extmark_id, { details = false })
 
-  local em = api.nvim_buf_get_extmark_by_id(bufnr, ns_id, extmark_id, { details = false })
-
-  api.nvim_buf_set_extmark(bufnr, ns_id, em[1], em[2], {
-    id = extmark_id,
-    virt_lines = lines,
-  })
+    api.nvim_buf_set_extmark(bufnr, ns_id, em[1], em[2], {
+      id = extmark_id,
+      virt_lines = lines,
+    })
+  end)
 end
 
 return Task

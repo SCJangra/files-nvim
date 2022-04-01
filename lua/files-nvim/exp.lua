@@ -12,18 +12,15 @@ local async = utils.async
 local Navigator = require 'files-nvim.exp.navigator'
 local Buf = require 'files-nvim.buf'
 local Task = require 'files-nvim.task'
+local event = require 'files-nvim.event'
 
 local api = vim.api
+local confirm = vim.fn.confirm
 
 local a_util = require 'plenary.async.util'
 local Line = require 'nui.line'
 local Text = require 'nui.text'
 local Input = require 'nui.input'
-
-local CbAction = {
-  Copy = 0,
-  Move = 1,
-}
 
 local Exp = Buf:new()
 
@@ -52,6 +49,11 @@ function Exp:new(fields)
       files = nil,
     },
     task = Task:new(client),
+    active_tasks = {
+      copy = {},
+      move = {},
+      delete = {},
+    },
   }
 
   self.__index = self
@@ -88,23 +90,84 @@ function Exp:_setup_keymaps()
   self:map('n', km.next, async_wrap(self._nav, self, self.nav.next))
   self:map('n', km.prev, async_wrap(self._nav, self, self.nav.prev))
   self:map('n', km.up, async_wrap(self._nav, self, self.nav.up))
-  self:map({ 'n', 'x' }, km.copy, async_wrap(self._action, self, wrap(self._copy_to_cb, self, CbAction.Copy), 'Never'))
-  self:map({ 'n', 'x' }, km.move, async_wrap(self._action, self, wrap(self._copy_to_cb, self, CbAction.Move), 'Never'))
-  self:map({ 'n', 'x' }, km.delete, async_wrap(self._action, self, wrap(self._del_sel_files, self), 'Done'))
-  self:map({ 'n', 'x' }, km.rename, wrap(self._show_rename_dialog, self))
-  self:map(
-    { 'n', 'x' },
-    km.paste,
-    async_wrap(self._action, self, wrap(self._paste, self), function()
-      local action = self.cb.action
-      if action == CbAction.Copy then
-        return 'Progress'
-      elseif action == CbAction.Move then
-        return 'Done'
-      end
-    end)
-  )
   self:map('n', km.show_tasks_split, async_wrap(self.task.open_split, self.task, 0, 'right', 40))
+  self:map({ 'n', 'x' }, km.copy, async_wrap(self._copy_to_cb, self, 'Copy'))
+  self:map({ 'n', 'x' }, km.move, async_wrap(self._copy_to_cb, self, 'Move'))
+  self:map({ 'n', 'x' }, km.delete, async_wrap(self._del_sel_files, self))
+  self:map('n', km.paste, async_wrap(self._paste, self))
+  self:map('n', km.rename, wrap(self._show_rename_dialog, self))
+end
+
+function Exp:_setup_fs_events()
+  local tasks = self.active_tasks
+  local copy = tasks.copy
+  local move = tasks.move
+  local delete = tasks.delete
+
+  local c = self.current
+  local is_id_equal = utils.is_id_equal
+
+  event:on('copy_start', function(id, files, dest)
+    copy[id] = {
+      files = files,
+      dest = dest,
+    }
+  end)
+  event:on('copy_prog', function(id, _)
+    if not is_id_equal(c.dir.id, copy[id].dest.id) then
+      return
+    end
+
+    async(self._refresh, self)
+  end)
+  event:on('copy_end', function(id)
+    copy[id] = nil
+  end)
+
+  event:on('move_start', function(id, files, dest)
+    move[id] = {
+      files = files,
+      dest = dest,
+    }
+  end)
+  event:on('move_end', function(id)
+    if not is_id_equal(c.dir.id, move[id].dest.id) then
+      return
+    end
+
+    async(self._refresh, self)
+    move[id] = nil
+  end)
+
+  event:on('delete_start', function(id, files, dir)
+    delete[id] = {
+      files = files,
+      dir = dir,
+    }
+  end)
+  event:on('delete_end', function(id)
+    if not is_id_equal(c.dir.id, delete[id].dir.id) then
+      return
+    end
+
+    async(self._refresh, self)
+    delete[id] = nil
+  end)
+
+  event:on('renamed', function(_, _, dir)
+    if not is_id_equal(dir.id, c.dir.id) then
+      return
+    end
+
+    async(self._refresh, self)
+  end)
+  event:on('created', function(_, _, dir)
+    if not is_id_equal(dir.id, c.dir.id) then
+      return
+    end
+
+    async(self._refresh, self)
+  end)
 end
 
 function Exp:_setup()
@@ -121,6 +184,7 @@ function Exp:_setup()
 
   self:_nav(self.nav.nav, dir)
   self:_setup_keymaps()
+  self:_setup_fs_events()
 end
 
 function Exp:_nav(fun, ...)
@@ -221,19 +285,6 @@ function Exp:_get_sel_files()
   return files
 end
 
-function Exp:_del_sel_files()
-  a_util.scheduler()
-
-  local files = self:_get_sel_files()
-  local choice = vim.fn.confirm(string.format('Delete %d items?', #files), 'Yes\nNo', 2)
-
-  if choice ~= 1 then
-    return
-  end
-
-  self.task:delete(files)
-end
-
 function Exp:_copy_to_cb(action)
   local cb = self.cb
 
@@ -243,45 +294,27 @@ function Exp:_copy_to_cb(action)
   cb.files = files
 end
 
-function Exp:_paste(on_prog)
+function Exp:_paste()
   local cb = self.cb
-  local task = self.task
-  local dir = self.current.dir
+  local c = self.current
 
-  if cb.action == CbAction.Copy then
-    task:copy(cb.files, dir, nil, on_prog)
-  elseif cb.action == CbAction.Move then
-    task:move(cb.files, dir, on_prog)
+  if cb.action == 'Copy' then
+    self.task:copy(cb.files, c.dir)
+  elseif cb.action == 'Move' then
+    self.task:move(cb.files, c.dir)
   end
 end
 
-function Exp:_action(fn, update_on)
-  local c = self.current
-  local c_dir_id = c.dir.id
-  local is_id_equal = utils.is_id_equal
+function Exp:_del_sel_files()
+  local files = self:_get_sel_files()
+  local dir = self.current.dir
 
-  local pfn = function()
-    if not is_id_equal(c_dir_id, c.dir.id) then
-      return
-    end
+  local choice = confirm(string.format('Delete %d items?', #files), 'Yes\nNo', 2)
 
-    async(self._refresh, self)
+  if choice ~= 1 then
+    return
   end
-
-  if type(update_on) == 'function' then
-    update_on = update_on()
-  end
-
-  if update_on == 'Progress' then
-    fn(pfn)
-  elseif update_on == 'Done' then
-    fn()
-    if is_id_equal(c_dir_id, c.dir.id) then
-      self:_refresh()
-    end
-  elseif update_on == 'Never' then
-    fn()
-  end
+  self.task:delete(files, dir)
 end
 
 function Exp:_show_rename_dialog()
@@ -290,17 +323,17 @@ function Exp:_show_rename_dialog()
   local i = Input(input_opts.rename, {
     prompt = '',
     default_value = file.name,
-    on_submit = function(new_name)
-      async(self._action, self, wrap(self._rename, self, file, new_name), 'Done')
-    end,
+    on_submit = async_wrap(self._rename, self, file, self.current.dir),
   })
 
   i:mount()
 end
 
-function Exp:_rename(file, new_name)
-  local err, _ = self.client:rename(file.id, new_name)
+function Exp:_rename(file, dir, new_name)
+  local err, new_file = self.client:rename(file.id, new_name)
   assert(not err, err)
+
+  event:broadcast('renamed', file, new_file, dir)
 end
 
 return Exp

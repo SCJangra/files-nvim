@@ -1,18 +1,28 @@
 local id = 0
 
 local handlers = {
+  -- task_id, files, dest_dir
   copy_start = {},
+  -- task_id, progress
   copy_prog = {},
+  -- task_id
   copy_end = {},
+  -- task_id, files, dest_dir
   move_start = {},
+  -- task_id, progress
   move_prog = {},
+  -- task_id
   move_end = {},
+  -- task_id, files, from_dir
   delete_start = {},
+  -- task_id, progress
   delete_prog = {},
+  -- task_id
   delete_end = {},
+  -- file_old, file_new, dir
   renamed = {},
-  created_file = {},
-  created_dir = {},
+  -- type, file, dir
+  created = {},
 }
 
 local Event = {}
