@@ -27,8 +27,6 @@ function Buf:open_current()
     return
   end
 
-  a_util.scheduler()
-
   local winid = api.nvim_get_current_win()
   local bufnr = api.nvim_create_buf(true, true)
 
@@ -44,7 +42,6 @@ function Buf:open_split(rel, pos, size)
     return
   end
 
-  a_util.scheduler()
   local bufnr = api.nvim_create_buf(false, true)
   local winid
 
@@ -61,6 +58,8 @@ function Buf:open_split(rel, pos, size)
   self.winid = winid
   self.bufnr = bufnr
   self.prev_winid = winid
+
+  self:_setup_win_opts()
 end
 
 function Buf:close()
@@ -113,6 +112,17 @@ function Buf:get_sel_range()
   end
 
   return range
+end
+
+function Buf:set_name(name)
+  api.nvim_buf_set_name(self.bufnr, name)
+end
+
+function Buf:_setup_win_opts()
+  local winid = self.winid
+
+  api.nvim_win_set_option(winid, 'number', false)
+  api.nvim_win_set_option(winid, 'signcolumn', 'no')
 end
 
 return Buf

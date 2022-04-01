@@ -27,6 +27,7 @@ end
 function Task:open_current()
   getmetatable(getmetatable(self).__index).__index.open_current(self)
 
+  self:set_name 'Tasks'
   self:_setup_keymaps()
   self:_show_tasks()
 end
@@ -34,6 +35,7 @@ end
 function Task:open_split(rel, pos, size)
   getmetatable(getmetatable(self).__index).__index.open_split(self, rel, pos, size)
 
+  self:set_name 'Tasks'
   self:_setup_keymaps()
   self:_show_tasks()
 end

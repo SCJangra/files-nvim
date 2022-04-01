@@ -65,12 +65,14 @@ end
 function Exp:open_current()
   getmetatable(getmetatable(self).__index).__index.open_current(self)
 
+  self:set_name 'FilesNvim'
   self:_setup()
 end
 
 function Exp:open_split(rel, pos, size)
   getmetatable(getmetatable(self).__index).__index.open_split(self, rel, pos, size)
 
+  self:set_name 'FilesNvim'
   self:_setup()
 end
 
@@ -91,7 +93,7 @@ function Exp:_setup_keymaps()
   self:map('n', km.next, async_wrap(self._nav, self, self.nav.next))
   self:map('n', km.prev, async_wrap(self._nav, self, self.nav.prev))
   self:map('n', km.up, async_wrap(self._nav, self, self.nav.up))
-  self:map('n', km.show_tasks_split, async_wrap(self.task.open_split, self.task, 0, 'right', 40))
+  self:map('n', km.show_tasks_split, wrap(self.task.open_split, self.task, 0, 'right', 40))
   self:map({ 'n', 'x' }, km.copy, async_wrap(self._copy_to_cb, self, 'Copy'))
   self:map({ 'n', 'x' }, km.move, async_wrap(self._copy_to_cb, self, 'Move'))
   self:map({ 'n', 'x' }, km.delete, async_wrap(self._del_sel_files, self))
