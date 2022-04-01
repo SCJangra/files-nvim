@@ -12,6 +12,7 @@ function Buf:new()
   local b = {
     bufnr = nil,
     winid = nil,
+    prev_winid = nil,
     ns_id = api.nvim_create_namespace '',
     is_win_owned = false,
   }
@@ -35,6 +36,7 @@ function Buf:open_current()
 
   self.winid = winid
   self.bufnr = bufnr
+  self.prev_winid = winid
 end
 
 function Buf:open_split(rel, pos, size)
@@ -58,6 +60,7 @@ function Buf:open_split(rel, pos, size)
 
   self.winid = winid
   self.bufnr = bufnr
+  self.prev_winid = winid
 end
 
 function Buf:close()

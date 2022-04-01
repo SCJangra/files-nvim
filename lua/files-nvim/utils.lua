@@ -1,5 +1,6 @@
-local a = require 'plenary.async'
 local run = require('plenary.async').run
+
+local api = vim.api
 
 local round = function(num, idp)
   return tonumber(string.format('%.' .. (idp or 0) .. 'f', num))
@@ -70,6 +71,29 @@ local async_wrap = function(fun, ...)
   end
 end
 
+--- Checks whether the given mime type is for a text file.
+local is_text = function(mime)
+  local text = 'text'
+  return mime:sub(1, #text) == text
+end
+
+--- Checks whether a local file is loaded in some buffer.
+-- @return the `bufnr` if file is loaded, `false` otherwise.
+local is_open = function(name)
+  local bufs = api.nvim_list_bufs()
+
+  for _, b in ipairs(bufs) do
+    local buf_name = api.nvim_buf_get_name(b)
+    local buf_is_loaded = api.nvim_buf_is_loaded(b)
+
+    if buf_is_loaded and buf_name == name then
+      return b
+    end
+  end
+
+  return false
+end
+
 return {
   round = round,
   bytes_to_size = bytes_to_size,
@@ -78,4 +102,6 @@ return {
   async = async,
   wrap = wrap,
   async_wrap = async_wrap,
+  is_text = is_text,
+  is_open = is_open,
 }

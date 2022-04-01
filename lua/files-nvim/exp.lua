@@ -9,6 +9,7 @@ local utils = require 'files-nvim.utils'
 local async_wrap = utils.async_wrap
 local wrap = utils.wrap
 local async = utils.async
+
 local Navigator = require 'files-nvim.exp.navigator'
 local Buf = require 'files-nvim.buf'
 local Task = require 'files-nvim.task'
@@ -231,6 +232,37 @@ function Exp:_open_current_file()
 
   if file.file_type == 'Dir' then
     self:_nav(self.nav.nav, file)
+  else
+    self:_open_file(file)
+  end
+end
+
+function Exp:_open_file(file)
+  if file.id[1] ~= 'Local' then
+    print 'Currently cannot open remote files'
+    return
+  end
+
+  local err, mime = self.client:get_mime(file.id)
+  assert(not err, err)
+
+  if not utils.is_text(mime) then
+    print 'Not a text file'
+    return
+  end
+
+  a_util.scheduler()
+
+  local winid = self.prev_winid
+  local path = file.id[2]
+  local bufnr = utils.is_open(path)
+
+  api.nvim_set_current_win(winid)
+
+  if bufnr then
+    api.nvim_win_set_buf(winid, bufnr)
+  else
+    api.nvim_command('edit ' .. path)
   end
 end
 

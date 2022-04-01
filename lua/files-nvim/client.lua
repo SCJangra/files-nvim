@@ -185,6 +185,10 @@ function Client:move_file(id, dest_id)
   return self:request('move', { id, dest_id })
 end
 
+function Client:get_mime(id)
+  return self:request('get_mime', { id })
+end
+
 function Client:copy(files, dst, prog_interval, on_prog)
   return self:subscribe('copy', { files, dst, prog_interval }, on_prog)
 end
