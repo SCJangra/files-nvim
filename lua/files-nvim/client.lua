@@ -150,7 +150,7 @@ function Client:subscribe(method, params, on_prog)
     end
   end
 
-  return err, cancel, r
+  return err, sub_id, cancel, r
 end
 
 function Client:get_meta(id)
