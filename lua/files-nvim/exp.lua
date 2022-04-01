@@ -96,6 +96,8 @@ function Exp:_setup_keymaps()
   self:map({ 'n', 'x' }, km.delete, async_wrap(self._del_sel_files, self))
   self:map('n', km.paste, async_wrap(self._paste, self))
   self:map('n', km.rename, wrap(self._show_rename_dialog, self))
+  self:map('n', km.create_file, wrap(self._show_create_dialog, self, 'File'))
+  self:map('n', km.create_dir, wrap(self._show_create_dialog, self, 'Dir'))
 end
 
 function Exp:_setup_fs_events()
@@ -334,6 +336,42 @@ function Exp:_rename(file, dir, new_name)
   assert(not err, err)
 
   event:broadcast('renamed', file, new_file, dir)
+end
+
+function Exp:_show_create_dialog(type)
+  local opts
+
+  if type == 'File' then
+    opts = input_opts.create_file
+  elseif type == 'Dir' then
+    opts = input_opts.create_dir
+  else
+    return
+  end
+
+  local i = Input(opts, {
+    prompt = '',
+    default_value = '',
+    on_submit = async_wrap(self._create, self, type, self.current.dir),
+  })
+
+  i:mount()
+end
+
+function Exp:_create(type, dir, name)
+  local err, res
+
+  if type == 'File' then
+    err, res = self.client:create_file(name, dir.id)
+  elseif type == 'Dir' then
+    err, res = self.client:create_dir(name, dir.id)
+  else
+    return
+  end
+
+  assert(not err, err)
+
+  event:broadcast('created', type, res, dir)
 end
 
 return Exp

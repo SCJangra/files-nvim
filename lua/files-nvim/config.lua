@@ -17,6 +17,8 @@ local uconf = {
       paste = 'p',
       delete = 'd',
       rename = 'r',
+      create_file = 'af',
+      create_dir = 'ad',
       show_tasks_split = 'ts',
     },
     input_opts = {
@@ -31,6 +33,30 @@ local uconf = {
           style = 'rounded',
           text = {
             top = ' Rename ',
+            top_align = 'left',
+          },
+        },
+      },
+      create_file = {
+        relative = 'win',
+        position = '50%',
+        size = '80%',
+        border = {
+          style = 'rounded',
+          text = {
+            top = ' Create File ',
+            top_align = 'left',
+          },
+        },
+      },
+      create_dir = {
+        relative = 'win',
+        position = '50%',
+        size = '80%',
+        border = {
+          style = 'rounded',
+          text = {
+            top = ' Create Dir ',
             top_align = 'left',
           },
         },
