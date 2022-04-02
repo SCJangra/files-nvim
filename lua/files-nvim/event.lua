@@ -1,6 +1,9 @@
 local id = 0
 
 local handlers = {
+  -- The comments below denote the arguments that are passed to handlers
+  -- for these events
+
   -- task_id, files, dest_dir
   copy_start = {},
   -- task_id, progress
