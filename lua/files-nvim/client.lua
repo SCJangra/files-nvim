@@ -95,7 +95,7 @@ function Client:stop()
     return
   end
 
-  uv.close(self.pipe)
+  self.pipe:close()
   self.pipe = nil
 end
 
