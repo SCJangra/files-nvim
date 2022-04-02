@@ -23,6 +23,8 @@ local handlers = {
   renamed = {},
   -- type, file, dir
   created = {},
+  -- exp
+  exp_closed = {},
 }
 
 local Event = {}
