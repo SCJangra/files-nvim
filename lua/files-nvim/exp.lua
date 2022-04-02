@@ -62,17 +62,15 @@ function Exp:new(fields)
   return setmetatable(e, self)
 end
 
-function Exp:open_current()
-  getmetatable(getmetatable(self).__index).__index.open_current(self)
+function Exp:open_current(listed)
+  getmetatable(getmetatable(self).__index).__index.open_current(self, listed)
 
-  self:set_name 'FilesNvim'
   self:_setup()
 end
 
 function Exp:open_split(rel, pos, size)
   getmetatable(getmetatable(self).__index).__index.open_split(self, rel, pos, size)
 
-  self:set_name 'FilesNvim'
   self:_setup()
 end
 
@@ -82,6 +80,7 @@ function Exp:close()
   getmetatable(getmetatable(self).__index).__index.close(self)
 
   self.client:stop()
+  event:broadcast('exp_closed', self)
 end
 
 function Exp:_setup_keymaps()
@@ -190,6 +189,7 @@ function Exp:_setup()
   self:_nav(self.nav.nav, dir)
   self:_setup_keymaps()
   self:_setup_fs_events()
+  self:set_name 'FilesNvim'
 end
 
 function Exp:_nav(fun, ...)

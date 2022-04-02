@@ -14,7 +14,6 @@ function Buf:new()
     winid = nil,
     prev_winid = nil,
     ns_id = api.nvim_create_namespace '',
-    is_win_owned = false,
   }
 
   self.__index = self
@@ -22,62 +21,57 @@ function Buf:new()
   return setmetatable(b, self)
 end
 
-function Buf:open_current()
+function Buf:open_in(winid, listed)
   if self.bufnr then
     return
   end
 
-  local winid = api.nvim_get_current_win()
-  local bufnr = api.nvim_create_buf(true, true)
+  if not self.prev_winid then
+    self.prev_winid = api.nvim_get_current_win()
+  end
 
+  local bufnr = api.nvim_create_buf(listed, true)
   api.nvim_win_set_buf(winid, bufnr)
+  api.nvim_set_current_win(winid)
 
   self.winid = winid
   self.bufnr = bufnr
-  self.prev_winid = winid
+end
+
+function Buf:open_current(listed)
+  self:open_in(api.nvim_get_current_win(), listed)
 end
 
 function Buf:open_split(rel, pos, size)
-  if self.bufnr then
-    return
-  end
+  self.prev_winid = api.nvim_get_current_win()
 
-  local bufnr = api.nvim_create_buf(false, true)
   local winid
 
   if type(rel) == 'number' then
-    winid = split.win[pos](size, rel, bufnr)
+    winid = split.win[pos](size, rel)
   elseif rel == 'win' then
-    winid = split.win[pos](size, 0, bufnr)
+    winid = split.win[pos](size, 0)
   elseif rel == 'editor' then
-    winid = split.editor[pos](size, bufnr)
+    winid = split.editor[pos](size)
   else
     assert(false, "Invalid value for 'rel'")
   end
 
-  self.winid = winid
-  self.bufnr = bufnr
-  self.prev_winid = winid
-
+  self:open_in(winid, false)
   self:_setup_win_opts()
 end
 
 function Buf:close()
   local bufnr = self.bufnr
-  local winid = self.winid
 
   if not bufnr then
     return
   end
 
-  if self.is_win_owned then
-    api.nvim_win_close(winid, false)
-    self.winid = nil
-  end
-
   api.nvim_buf_clear_namespace(bufnr, self.ns_id, 0, -1)
   api.nvim_buf_delete(bufnr, { force = true })
   self.bufnr = nil
+  self.prev_winid = nil
 end
 
 function Buf:map(modes, lhs, rhs)
