@@ -182,7 +182,7 @@ function Client:rename(id, new_name)
 end
 
 function Client:move_file(id, dest_id)
-  return self:request('move', { id, dest_id })
+  return self:request('move_file', { id, dest_id })
 end
 
 function Client:get_mime(id)
