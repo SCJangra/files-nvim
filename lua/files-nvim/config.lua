@@ -63,6 +63,9 @@ local uconf = {
       },
     },
   },
+  task = {
+    cp_interval = 500,
+  },
   keymaps = {
     quit = 'q',
   },

@@ -4,6 +4,8 @@ local uv = a.uv
 local loop = vim.loop
 local json = vim.json
 
+local uconf = require('files-nvim.config').get_config()
+
 local Client = {}
 
 function Client:new()
@@ -190,7 +192,7 @@ function Client:get_mime(id)
 end
 
 function Client:copy(files, dst, prog_interval, on_prog)
-  return self:subscribe('copy', { files, dst, prog_interval }, on_prog)
+  return self:subscribe('copy', { files, dst, prog_interval or uconf.task.cp_interval }, on_prog)
 end
 
 function Client:move(files, dst, on_prog)

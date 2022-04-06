@@ -335,7 +335,7 @@ function Exp:_paste()
   local c = self.current
 
   if cb.action == 'Copy' then
-    self.task:copy(cb.files, c.dir)
+    self.task:copy(cb.files, c.dir, uconf.task.cp_interval)
   elseif cb.action == 'Move' then
     self.task:move(cb.files, c.dir)
   end
