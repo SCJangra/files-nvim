@@ -366,7 +366,12 @@ function Exp:_show_rename_dialog()
 end
 
 function Exp:_rename(file, dir, new_name)
-  local err, new_file = self.client:rename(file.id, new_name)
+  local client = self.client
+
+  local err, id = client:rename(file.id, new_name)
+  assert(not err, err)
+
+  local err, new_file = client:get_meta(id)
   assert(not err, err)
 
   event:broadcast('renamed', file, new_file, dir)
@@ -393,19 +398,22 @@ function Exp:_show_create_dialog(type)
 end
 
 function Exp:_create(type, dir, name)
-  local err, res
+  local client = self.client
+  local err, id
 
   if type == 'File' then
-    err, res = self.client:create_file(name, dir.id)
+    err, id = client:create_file(name, dir.id)
   elseif type == 'Dir' then
-    err, res = self.client:create_dir(name, dir.id)
+    err, id = client:create_dir(name, dir.id)
   else
     return
   end
-
   assert(not err, err)
 
-  event:broadcast('created', type, res, dir)
+  local err, file = client:get_meta(id)
+  assert(not err, err)
+
+  event:broadcast('created', type, file, dir)
 end
 
 return Exp
