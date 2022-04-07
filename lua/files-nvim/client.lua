@@ -3,6 +3,7 @@ local channel = require('plenary.async.control').channel
 local uv = a.uv
 local loop = vim.loop
 local json = vim.json
+local fn = vim.fn
 
 local uconf = require('files-nvim.config').get_config()
 
@@ -12,7 +13,8 @@ function Client:new()
   local c = {
     sock = '/tmp/files',
     jrpc_ver = '2.0',
-    pipe = nil,
+    pipe = loop.new_pipe(false),
+    job_id = nil,
     res = {},
     nt = {},
     mid = 0,
@@ -21,11 +23,29 @@ function Client:new()
 end
 
 function Client:start()
-  if self.pipe then
+  if self.job_id then
     return
   end
 
-  self.pipe = loop.new_pipe(false)
+  local s, r = channel.oneshot()
+  local started = false
+
+  self.job_id = fn.jobstart({ fn.stdpath 'data' .. '/files-ipc-linux', self.sock }, {
+    on_stdout = function()
+      if started then
+        return
+      end
+
+      started = true
+      a.run(function()
+        s()
+      end)
+    end,
+  })
+  assert(self.job_id ~= 0, 'Invalid arguments to ipc server')
+  assert(self.job_id ~= -1, 'server binary is not executable')
+
+  r()
 
   local err = uv.pipe_connect(self.pipe, self.sock)
   assert(not err, err)
@@ -93,12 +113,13 @@ function Client:_handle_msg(msg)
 end
 
 function Client:stop()
-  if not self.pipe then
+  if not self.job_id then
     return
   end
 
+  fn.jobstop(self.job_id)
+  self.job_id = nil
   self.pipe:close()
-  self.pipe = nil
 end
 
 function Client:request(method, params)
