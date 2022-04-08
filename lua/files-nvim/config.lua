@@ -9,8 +9,6 @@ local uconf = {
     hl = {
       size = 'FilesNvimExpFileSize', -- hl for file sizes
       name = 'FilesNvimExpFileName', -- hl for file names
-      prog_key = 'FilesNvimProgKey',
-      prog_val = 'FilesNvimProgVal',
     },
     keymaps = {
       next = 'l', -- go to the next directory
@@ -38,11 +36,8 @@ local uconf = {
     --   https://github.com/MunifTanjim/nui.nvim/tree/main/lua/nui/input
     input_opts = {
       rename = {
-        relative = 'cursor',
-        position = {
-          row = 1,
-          col = 0,
-        },
+        relative = 'win',
+        position = '50%',
         size = '80%',
         border = {
           style = 'rounded',
@@ -82,6 +77,10 @@ local uconf = {
   task = {
     -- how often to update the copy progress
     cp_interval = 500, -- update every 500 milliseconds
+    hl = {
+      prog_key = 'FilesNvimProgKey',
+      prog_val = 'FilesNvimProgVal',
+    },
   },
   -- These keymaps apply to all windows/buffers that are opened by this plugin
   keymaps = {

@@ -1,4 +1,4 @@
-local hl = require('files-nvim.config').get_config().exp.hl
+local hl = require('files-nvim.config').get_config().task.hl
 local utils = require 'files-nvim.utils'
 
 local lines = {}
