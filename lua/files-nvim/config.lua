@@ -80,6 +80,12 @@ local pconf = {
 
 local set_config = function(c)
   uconf = vim.tbl_deep_extend('force', uconf, c)
+
+  for k, _ in pairs(package.loaded) do
+    if k:match '^files%-nvim' and not k:match '^files%-nvim.config' then
+      package.loaded[k] = nil
+    end
+  end
 end
 
 local get_config = function()
