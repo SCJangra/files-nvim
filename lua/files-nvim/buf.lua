@@ -150,6 +150,22 @@ function Buf:get_win_opts(opts)
   return o
 end
 
+function Buf:with_buf_opts(opts, fun)
+  local backup_opts = self:get_buf_opts(vim.tbl_keys(opts))
+
+  self:set_buf_opts(opts)
+  fun()
+  self:set_buf_opts(backup_opts)
+end
+
+function Buf:with_win_opts(opts, fun)
+  local backup_opts = self:get_win_opts(vim.tbl_keys(opts))
+
+  self:set_win_opts(opts)
+  fun()
+  self:set_win_opts(backup_opts)
+end
+
 function Buf:_setup_win_opts()
   self:set_win_opts {
     number = false,
