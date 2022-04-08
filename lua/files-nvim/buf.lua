@@ -128,6 +128,28 @@ function Buf:set_win_opts(opts)
   end
 end
 
+function Buf:get_buf_opts(opts)
+  local bufnr = self.bufnr
+  local o = {}
+
+  for _, v in ipairs(opts) do
+    o[v] = api.nvim_buf_get_option(bufnr, v)
+  end
+
+  return o
+end
+
+function Buf:get_win_opts(opts)
+  local winid = self.winid
+  local o = {}
+
+  for _, v in ipairs(opts) do
+    o[v] = api.nvim_win_get_option(winid, v)
+  end
+
+  return o
+end
+
 function Buf:_setup_win_opts()
   self:set_win_opts {
     number = false,
