@@ -24,7 +24,16 @@ event:on('exp_closed', function(e)
   exps[e] = nil
 end)
 
+local open_current = function(fields, listed)
+  open('current', fields, listed)
+end
+
+local open_split = function(fields, rel, pos, size)
+  open('split', fields, rel, pos, size)
+end
+
 return {
   setup = setup,
-  open = open,
+  open_split = open_split,
+  open_current = open_current,
 }
