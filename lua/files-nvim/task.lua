@@ -93,7 +93,7 @@ function Task:move(files, dst)
 end
 
 function Task:delete(files, dir)
-  local msg = string.format('Move %d items from %s', #files, dir.name)
+  local msg = string.format('Delete %d items from %s', #files, dir.name)
   self:_run(msg, 'delete', files, dir)
 end
 
