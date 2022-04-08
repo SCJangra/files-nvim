@@ -6,7 +6,7 @@ external file explorers like thunar and pcmanfm.
 
 This plugin will also support managing files in remote file storage services like [Mega](https://mega.io/)
 and [Google Drive](https://drive.google.com/). This plugin uses the [files](https://github.com/SCJangra/files) crate
-so as soon support for remote files is implemented there, it will also be available here.
+so as soon as support for remote files is implemented there, it will also be available here.
 
 ## Dependencies
 - A linux os
@@ -37,7 +37,7 @@ Open explorer in current window
 Open explorer in a split  
 `:lua require('files-nvim').open_split({ 'size' }, 'win', 'left', 50)`
 
-**Note:** To select multiple files to copy/move/delete got to Visual Line Mode using 'V' (Shift-v).
+To select multiple files to copy/move/delete got to Visual Line Mode using 'V' (Shift-v).
 
 ## Default config
 ``` lua
