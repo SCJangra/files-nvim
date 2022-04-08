@@ -15,7 +15,7 @@ local uconf = {
       prev = 'h', -- go to previous directory
       up = 'H', -- go up one directory
       open = '<CR>', -- open file/directory under cursor
-      copy = 'y', -- copy selected fiels to clipboard
+      copy = 'y', -- copy selected files to clipboard
       -- Copy selected files to clipboard and set the action to 'Move'.
       -- When the files are pasted using 'paste' map, these files will be
       -- moved to the new directory instead of copying.
