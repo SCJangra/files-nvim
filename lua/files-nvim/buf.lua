@@ -36,6 +36,8 @@ function Buf:open_in(winid, listed)
 
   self.winid = winid
   self.bufnr = bufnr
+
+  self:set_buf_opts { modifiable = false }
 end
 
 function Buf:open_current(listed)

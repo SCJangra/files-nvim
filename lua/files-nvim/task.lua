@@ -118,7 +118,10 @@ function Task:_insert_task(t)
 
     a_util.scheduler()
 
-    api.nvim_buf_set_lines(bufnr, i, k, false, { t.message })
+    self:with_buf_opts({ modifiable = true }, function()
+      api.nvim_buf_set_lines(bufnr, i, k, false, { t.message })
+    end)
+
     local extmark_id = api.nvim_buf_set_extmark(bufnr, ns_id, i, 0, {})
     t.extmark_id = extmark_id
   end
@@ -143,7 +146,10 @@ function Task:_remove_task(t)
     local row = em[1]
 
     api.nvim_buf_del_extmark(bufnr, ns_id, extmark_id)
-    api.nvim_buf_set_lines(bufnr, row, row + 1, true, {})
+
+    self:with_buf_opts({ modifiable = true }, function()
+      api.nvim_buf_set_lines(bufnr, row, row + 1, true, {})
+    end)
   end
 end
 
@@ -154,7 +160,10 @@ function Task:_show_tasks()
   for k, t in ipairs(self.tasks) do
     local i = k - 1
 
-    api.nvim_buf_set_lines(bufnr, i, k, false, { t.message })
+    self:with_buf_opts({ modifiable = true }, function()
+      api.nvim_buf_set_lines(bufnr, i, k, false, { t.message })
+    end)
+
     local extmark_id = api.nvim_buf_set_extmark(bufnr, ns_id, i, 0, {})
 
     t.extmark_id = extmark_id

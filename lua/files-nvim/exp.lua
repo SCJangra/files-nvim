@@ -276,11 +276,13 @@ function Exp:_set(dir, files)
   local ns_id = self.ns_id
 
   api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
-  api.nvim_buf_set_lines(bufnr, 0, -1, true, {})
 
-  for i, f in ipairs(files) do
-    self:_to_line(f):render(bufnr, ns_id, i, i + 1)
-  end
+  self:with_buf_opts({ modifiable = true }, function()
+    api.nvim_buf_set_lines(bufnr, 0, -1, true, {})
+    for i, f in ipairs(files) do
+      self:_to_line(f):render(bufnr, ns_id, i, i + 1)
+    end
+  end)
 
   cur.dir = dir
   cur.files = files
