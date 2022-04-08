@@ -112,11 +112,27 @@ function Buf:set_name(name)
   api.nvim_buf_set_name(self.bufnr, name)
 end
 
-function Buf:_setup_win_opts()
+function Buf:set_buf_opts(opts)
+  local bufnr = self.bufnr
+
+  for k, v in pairs(opts) do
+    api.nvim_buf_set_option(bufnr, k, v)
+  end
+end
+
+function Buf:set_win_opts(opts)
   local winid = self.winid
 
-  api.nvim_win_set_option(winid, 'number', false)
-  api.nvim_win_set_option(winid, 'signcolumn', 'no')
+  for k, v in pairs(opts) do
+    api.nvim_win_set_option(winid, k, v)
+  end
+end
+
+function Buf:_setup_win_opts()
+  self:set_win_opts {
+    number = false,
+    signcolumn = 'no',
+  }
 end
 
 return Buf
