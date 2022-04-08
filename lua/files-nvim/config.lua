@@ -1,26 +1,41 @@
 local uconf = {
+  -- Config for the explorer.
   exp = {
+    -- Set the fields that are shown in the explorer.
+    -- Currently supported fields are: { 'size' }.
+    -- The name of the file is always shown whether it is set in the fields or not.
     fields = { 'size' },
+    -- Set highlight groups here
     hl = {
-      size = 'FilesNvimExpFileSize',
-      name = 'FilesNvimExpFileName',
+      size = 'FilesNvimExpFileSize', -- hl for file sizes
+      name = 'FilesNvimExpFileName', -- hl for file names
       prog_key = 'FilesNvimProgKey',
       prog_val = 'FilesNvimProgVal',
     },
     keymaps = {
-      next = 'l',
-      prev = 'h',
-      up = 'H',
-      open = '<CR>',
-      copy = 'y',
+      next = 'l', -- go to the next directory
+      prev = 'h', -- go to previous directory
+      up = 'H', -- go up one directory
+      open = '<CR>', -- open file/directory under cursor
+      copy = 'y', -- copy selected fiels to clipboard
+      -- Copy selected files to clipboard and set the action to 'Move'.
+      -- When the files are pasted using 'paste' map, these files will be
+      -- moved to the new directory instead of copying.
+      -- Trying to move files between different mount points, hard drives, partitions etc
+      -- will cause an error.
       move = 'x',
-      paste = 'p',
-      delete = 'd',
-      rename = 'r',
-      create_file = 'af',
-      create_dir = 'ad',
-      show_tasks_split = 'ts',
+      paste = 'p', -- paste files from the clipboard in the current directory
+      delete = 'd', -- delete selected files
+      rename = 'r', -- rename the file under cursor
+      create_file = 'af', -- create a new file in current directory
+      create_dir = 'ad', -- create a new directory in current directory
+      show_tasks_split = 'ts', -- open task viewer/manager
     },
+    -- Theese are the options for the floating dialog boxes
+    -- that are opened when creating and renaming files.
+    -- Look at these links for all supported options:
+    --   https://github.com/MunifTanjim/nui.nvim/tree/main/lua/nui/popup
+    --   https://github.com/MunifTanjim/nui.nvim/tree/main/lua/nui/input
     input_opts = {
       rename = {
         relative = 'cursor',
@@ -63,11 +78,14 @@ local uconf = {
       },
     },
   },
+  -- config for task viewer/manager
   task = {
-    cp_interval = 500,
+    -- how often to update the copy progress
+    cp_interval = 500, -- update every 500 milliseconds
   },
+  -- These keymaps apply to all windows/buffers that are opened by this plugin
   keymaps = {
-    quit = 'q',
+    quit = 'q', -- quit current buffer/window
   },
 }
 
