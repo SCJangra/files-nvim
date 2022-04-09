@@ -1,4 +1,8 @@
 local run = require('plenary.async').run
+local icons = require 'nvim-web-devicons'
+local Text = require 'nui.text'
+
+local exp_icons = require('files-nvim.config').get_config().exp.icons
 
 local api = vim.api
 
@@ -94,6 +98,12 @@ local is_open = function(name)
   return false
 end
 
+local get_icon = function(file)
+  local icon = file.file_type == 'Dir' and exp_icons.dir or icons.get_icon(file.name)
+  local t = Text(icon or exp_icons.default)
+  return t
+end
+
 return {
   round = round,
   bytes_to_size = bytes_to_size,
@@ -104,4 +114,5 @@ return {
   async_wrap = async_wrap,
   is_text = is_text,
   is_open = is_open,
+  get_icon = get_icon,
 }

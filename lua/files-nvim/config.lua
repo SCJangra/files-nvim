@@ -1,6 +1,10 @@
 local uconf = {
   -- Config for the explorer.
   exp = {
+    icons = {
+      dir = '',
+      default = '',
+    },
     -- Set the fields that are shown in the explorer.
     -- Currently supported fields are: { 'size' }.
     -- The name of the file is always shown whether it is set in the fields or not.

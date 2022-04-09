@@ -55,6 +55,8 @@ function Exp:new(fields)
       move = {},
       delete = {},
     },
+
+    space = Text ' ',
   }
 
   self.__index = self
@@ -207,6 +209,7 @@ function Exp:_to_line(file)
   local fields = self.fields.active
   local fmt = self.fields.fmt
   local line = {}
+  local space = self.space
 
   for _, f in ipairs(fields) do
     if f == 'name' then
@@ -214,11 +217,13 @@ function Exp:_to_line(file)
     end
 
     table.insert(line, Text(fmt[f](file[f]), hl[f]))
-    table.insert(line, Text ' ')
+    table.insert(line, space)
 
     ::continue::
   end
 
+  table.insert(line, utils.get_icon(file))
+  table.insert(line, space)
   table.insert(line, Text(fmt.name(file.name), hl.name))
 
   return Line(line)

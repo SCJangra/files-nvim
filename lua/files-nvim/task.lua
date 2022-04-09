@@ -83,17 +83,17 @@ function Task:_run(msg, method, ...)
 end
 
 function Task:copy(files, dst, prog_interval)
-  local msg = string.format('Copy %d items to %s', #files, dst.name)
+  local msg = string.format('Copy %d items to %s %s', #files, utils.get_icon(dst), dst.name)
   self:_run(msg, 'copy', files, dst, prog_interval)
 end
 
 function Task:move(files, dst)
-  local msg = string.format('Move %d items to %s', #files, dst.name)
+  local msg = string.format('Move %d items to %s %s', #files, utils.get_icon(dst), dst.name)
   self:_run(msg, 'move', files, dst)
 end
 
 function Task:delete(files, dir)
-  local msg = string.format('Delete %d items from %s', #files, dir.name)
+  local msg = string.format('Delete %d items from %s %s', #files, utils.get_icon(dir), dir.name)
   self:_run(msg, 'delete', files, dir)
 end
 
