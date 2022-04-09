@@ -310,23 +310,10 @@ function Exp:_refresh()
   end
 end
 
-function Exp:_get_sel_files()
-  local cur_files = self.current.files
-
-  local range = self:get_sel_range()
-  local files = {}
-
-  for i = range[1], range[2] do
-    table.insert(files, cur_files[i])
-  end
-
-  return files
-end
-
 function Exp:_copy_to_cb(action)
   local cb = self.cb
 
-  local files = self:_get_sel_files()
+  local files = self:get_sel_items(self.current.files)
 
   cb.action = action
   cb.files = files
@@ -344,7 +331,7 @@ function Exp:_paste()
 end
 
 function Exp:_del_sel_files()
-  local files = self:_get_sel_files()
+  local files = self:get_sel_items(self.current.files)
   local dir = self.current.dir
 
   local choice = confirm(string.format('Delete %d items?', #files), 'Yes\nNo', 2)

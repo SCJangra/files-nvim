@@ -82,34 +82,6 @@ function Buf:map(modes, lhs, rhs)
   keymap.set(modes, lhs, rhs, opts)
 end
 
-function Buf:get_sel_range()
-  a_util.scheduler()
-
-  local mode = api.nvim_get_mode().mode
-
-  local range = {}
-
-  if mode == 'n' then
-    local line = api.nvim_win_get_cursor(self.winid)[1]
-    table.insert(range, line)
-    table.insert(range, line)
-  elseif mode == 'V' then
-    api.nvim_input '<esc>'
-
-    -- This second scheduler call is required, because the marks '<' and '>' are
-    -- updated in the next event loop iteration after escaping the visual mode.
-    a_util.scheduler()
-
-    local range_start = api.nvim_buf_get_mark(self.bufnr, '<')[1]
-    local range_end = api.nvim_buf_get_mark(self.bufnr, '>')[1]
-
-    table.insert(range, range_start)
-    table.insert(range, range_end)
-  end
-
-  return range
-end
-
 function Buf:set_name(name)
   api.nvim_buf_set_name(self.bufnr, name)
 end
@@ -171,6 +143,46 @@ end
 function Buf:get_current_item(items)
   local index = api.nvim_win_get_cursor(self.winid)[1]
   return items[index], index
+end
+
+function Buf:get_sel_items(items)
+  local r = self:_get_sel_range()
+
+  local sel_items = {}
+
+  for i = r[1], r[2] do
+    table.insert(sel_items, items[i])
+  end
+
+  return sel_items
+end
+
+function Buf:_get_sel_range()
+  a_util.scheduler()
+
+  local mode = api.nvim_get_mode().mode
+
+  local range = {}
+
+  if mode == 'n' then
+    local line = api.nvim_win_get_cursor(self.winid)[1]
+    table.insert(range, line)
+    table.insert(range, line)
+  elseif mode == 'V' then
+    api.nvim_input '<esc>'
+
+    -- This second scheduler call is required, because the marks '<' and '>' are
+    -- updated in the next event loop iteration after escaping the visual mode.
+    a_util.scheduler()
+
+    local range_start = api.nvim_buf_get_mark(self.bufnr, '<')[1]
+    local range_end = api.nvim_buf_get_mark(self.bufnr, '>')[1]
+
+    table.insert(range, range_start)
+    table.insert(range, range_end)
+  end
+
+  return range
 end
 
 function Buf:_setup_win_opts()
