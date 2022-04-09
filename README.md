@@ -130,6 +130,9 @@ To select multiple files to copy/move/delete got to Visual Line Mode using 'V' (
       prog_key = 'FilesNvimProgKey',
       prog_val = 'FilesNvimProgVal',
     },
+    keymaps = {
+      cancel = 'c',
+    },
   },
   -- These keymaps apply to all windows/buffers that are opened by this plugin
   keymaps = {

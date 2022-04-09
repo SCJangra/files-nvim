@@ -12,6 +12,7 @@ local api = vim.api
 local notify = vim.notify
 local l = vim.log.levels
 local schedule = vim.schedule
+local fn = vim.fn
 
 local Task = Buf:new()
 
@@ -38,6 +39,21 @@ function Task:open_split(rel, pos, size)
   self:set_name 'Tasks'
   self:_setup_keymaps()
   self:_show_tasks()
+end
+
+function Task:copy(files, dst, prog_interval)
+  local msg = string.format('Copy %d items to %s %s', #files, utils.get_icon(dst), dst.name)
+  self:_run(msg, 'copy', files, dst, prog_interval)
+end
+
+function Task:move(files, dst)
+  local msg = string.format('Move %d items to %s %s', #files, utils.get_icon(dst), dst.name)
+  self:_run(msg, 'move', files, dst)
+end
+
+function Task:delete(files, dir)
+  local msg = string.format('Delete %d items from %s %s', #files, utils.get_icon(dir), dir.name)
+  self:_run(msg, 'delete', files, dir)
 end
 
 function Task:_run(msg, method, ...)
@@ -82,25 +98,12 @@ function Task:_run(msg, method, ...)
   self:_remove_task(t)
 end
 
-function Task:copy(files, dst, prog_interval)
-  local msg = string.format('Copy %d items to %s %s', #files, utils.get_icon(dst), dst.name)
-  self:_run(msg, 'copy', files, dst, prog_interval)
-end
-
-function Task:move(files, dst)
-  local msg = string.format('Move %d items to %s %s', #files, utils.get_icon(dst), dst.name)
-  self:_run(msg, 'move', files, dst)
-end
-
-function Task:delete(files, dir)
-  local msg = string.format('Delete %d items from %s %s', #files, utils.get_icon(dir), dir.name)
-  self:_run(msg, 'delete', files, dir)
-end
-
 function Task:_setup_keymaps()
   local gkm = uconf.keymaps
+  local km = uconf.task.keymaps
 
   self:map('n', gkm.quit, async_wrap(self.close, self))
+  self:map({ 'n', 'x' }, km.cancel, async_wrap(self._cancel_sel_tasks, self))
 end
 
 function Task:_insert_task(t)
@@ -187,6 +190,20 @@ function Task:_show_prog(t, lines)
       virt_lines = lines,
     })
   end)
+end
+
+function Task:_cancel_sel_tasks()
+  local tasks = self:get_sel_items(self.tasks)
+
+  local choice = fn.confirm(string.format('Cancel %d tasks?', #tasks), 'Yes\nNo', 2)
+
+  if choice ~= 1 then
+    return
+  end
+
+  for _, t in ipairs(tasks) do
+    t.cancel()
+  end
 end
 
 return Task

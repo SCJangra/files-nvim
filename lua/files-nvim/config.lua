@@ -85,6 +85,9 @@ local uconf = {
       prog_key = 'FilesNvimProgKey',
       prog_val = 'FilesNvimProgVal',
     },
+    keymaps = {
+      cancel = 'c',
+    },
   },
   -- These keymaps apply to all windows/buffers that are opened by this plugin
   keymaps = {

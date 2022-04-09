@@ -157,7 +157,7 @@ function Client:subscribe(method, params, on_prog)
   local s, r = channel.oneshot()
 
   local cancel = function()
-    local err, res = self:request(method .. '_c', sub_id)
+    local err, res = self:request(method .. '_c', { sub_id })
 
     self.nt[sub_id] = nil
     s()
