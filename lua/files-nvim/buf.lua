@@ -168,6 +168,11 @@ function Buf:with_win_opts(opts, fun)
   self:set_win_opts(backup_opts)
 end
 
+function Buf:get_current_item(items)
+  local index = api.nvim_win_get_cursor(self.winid)[1]
+  return items[index], index
+end
+
 function Buf:_setup_win_opts()
   self:set_win_opts {
     number = false,

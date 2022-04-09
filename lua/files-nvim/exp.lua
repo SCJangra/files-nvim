@@ -229,13 +229,8 @@ function Exp:_to_line(file)
   return Line(line)
 end
 
-function Exp:_get_current_file()
-  local index = api.nvim_win_get_cursor(self.winid)[1]
-  return index, self.current.files[index]
-end
-
 function Exp:_open_current_file()
-  local _, file = self:_get_current_file()
+  local file = self:get_current_item(self.current.files)
 
   if file.file_type == 'Dir' then
     self:_nav(self.nav.nav, file)
@@ -361,7 +356,7 @@ function Exp:_del_sel_files()
 end
 
 function Exp:_show_rename_dialog()
-  local _, file = self:_get_current_file()
+  local file = self:get_current_item(self.current.files)
 
   local i = Input(input_opts.rename, {
     prompt = '',
