@@ -14,12 +14,14 @@ so as soon as support for remote files is implemented there, it will also be ava
 - wget
 - [nui.nvim](https://github.com/MunifTanjim/nui.nvim)
 - [plenary.nvim](https://github.com/nvim-lua/plenary.nvim)
+- [nvim-web-devicons](https://github.com/kyazdani42/nvim-web-devicons)
 
 ## Install
 ``` lua
 use {
     'SCJangra/files-nvim',
     requires = {
+      'kyazdani42/nvim-web-devicons',
       'MunifTanjim/nui.nvim',
       'nvim-lua/plenary.nvim'
     },
@@ -44,6 +46,10 @@ To select multiple files to copy/move/delete got to Visual Line Mode using 'V' (
 {
   -- Config for the explorer.
   exp = {
+    icons = {
+      dir = '',
+      default = '',
+    },
     -- Set the fields that are shown in the explorer.
     -- Currently supported fields are: { 'size' }.
     -- The name of the file is always shown whether it is set in the fields or not.
