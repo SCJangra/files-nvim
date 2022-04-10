@@ -9,7 +9,7 @@ and [Google Drive](https://drive.google.com/). This plugin uses the [files](http
 so as soon as support for remote files is implemented there, it will also be available here.
 
 ## Dependencies
-- A linux os
+- Linux/macOS
 - neovim >= 0.7.0
 - wget
 - [nui.nvim](https://github.com/MunifTanjim/nui.nvim)
@@ -27,7 +27,7 @@ use {
     },
     config = function() require('files-nvim').setup {} end,
     run = function(c)
-      vim.api.nvim_command('!bash ' .. c.install_path .. '/install.sh ' .. vim.fn.stdpath 'data')
+      dofile(c.install_path .. '/install.lua')(c)
     end,
 }
 ```
