@@ -11,7 +11,6 @@ local Client = {}
 
 function Client:new()
   local c = {
-    sock = '/tmp/files',
     jrpc_ver = '2.0',
     pipe = loop.new_pipe(false),
     job_id = nil,
@@ -27,10 +26,12 @@ function Client:start()
     return
   end
 
+  local sock = os.tmpname()
+
   local s, r = channel.oneshot()
   local started = false
 
-  self.job_id = fn.jobstart({ fn.stdpath 'data' .. '/files-ipc-linux', self.sock }, {
+  self.job_id = fn.jobstart({ fn.stdpath 'data' .. '/files-ipc', sock }, {
     on_stdout = function()
       if started then
         return
@@ -47,7 +48,7 @@ function Client:start()
 
   r()
 
-  local err = uv.pipe_connect(self.pipe, self.sock)
+  local err = uv.pipe_connect(self.pipe, sock)
   assert(not err, err)
 
   self:_read_start()
