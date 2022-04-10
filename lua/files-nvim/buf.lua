@@ -161,14 +161,20 @@ function Buf:_get_sel_range()
   a_util.scheduler()
 
   local mode = api.nvim_get_mode().mode
+  mode = string.byte(mode)
+
+  local normal = 110
+  local visual = 118
+  local visual_line = 86
+  local visual_block = 22
 
   local range = {}
 
-  if mode == 'n' then
+  if mode == normal then
     local line = api.nvim_win_get_cursor(self.winid)[1]
     table.insert(range, line)
     table.insert(range, line)
-  elseif mode == 'V' then
+  elseif mode == visual or mode == visual_line or mode == visual_block then
     api.nvim_input '<esc>'
 
     -- This second scheduler call is required, because the marks '<' and '>' are
