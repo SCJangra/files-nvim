@@ -9,6 +9,7 @@ local uconf = require('files-nvim.config').get_config()
 
 local Client = {}
 
+--- Create a new client
 function Client:new()
   local c = {
     jrpc_ver = '2.0',
@@ -21,6 +22,7 @@ function Client:new()
   return setmetatable(c, { __index = self })
 end
 
+--- Start rpc server
 function Client:start()
   if self.job_id then
     return
@@ -54,6 +56,7 @@ function Client:start()
   self:_read_start()
 end
 
+--- Start listening to rpc response/notifications
 function Client:_read_start()
   local line = nil
 
@@ -89,6 +92,8 @@ function Client:_read_start()
   end)
 end
 
+--- Handle an rpc response/notification
+-- @tparam table msg - rpc response/notification object
 function Client:_handle_msg(msg)
   if msg.id then
     local err = msg.error
@@ -113,6 +118,7 @@ function Client:_handle_msg(msg)
   end
 end
 
+--- Stop rpc server
 function Client:stop()
   if not self.job_id then
     return
@@ -123,6 +129,11 @@ function Client:stop()
   self.pipe:close()
 end
 
+--- Send a request to rpc server
+-- @tparam string method - name of method to call
+-- @tparam array params - parameters passed to the method
+-- @treturn table|nil - error object if any
+-- @treturn table|nil - success object if there was no error
 function Client:request(method, params)
   self.mid = self.mid + 1
 
@@ -148,6 +159,13 @@ function Client:request(method, params)
   return r()
 end
 
+--- Send a subscription request to the server
+-- @tparam string method - name of the method to call
+-- @tparam array params - parameters passed to the method
+-- @treturn table|nil - error object is any
+-- @treturn string|nil - subscription id if there was no error
+-- @treturn function|nil - a function which when called will cancel this subscription
+-- @treturn function|nil - a function which when called will block current task until the subscription is completed
 function Client:subscribe(method, params, on_prog)
   local err, sub_id = self:request(method, params)
 

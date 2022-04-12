@@ -1,3 +1,5 @@
+--- Here are some utility functions that are used throughout the project.
+
 local run = require('plenary.async').run
 local icons = require 'nvim-web-devicons'
 local Text = require 'nui.text'
@@ -10,7 +12,9 @@ local round = function(num, idp)
   return tonumber(string.format('%.' .. (idp or 0) .. 'f', num))
 end
 
--- Convert bytes to human readable format
+--- Convert bytes to human readable format
+-- @tparam number bytes - the number of bytes
+-- @treturn string - human readable representation of the given bytes
 local bytes_to_size = function(bytes)
   local precision = 2
   local kilobyte = 1024
@@ -37,10 +41,17 @@ local percent = function(val, of)
   return (of / 100) * val
 end
 
-local is_id_equal = function(id1, id2)
-  return id1[1] == id2[1] and id1[2] == id2[2]
+--- Check whether two file ids are equal
+-- @tparam {string,string} first - the first id
+-- @tparam {string,string} second - the second id
+-- @treturn boolean - `true` when both ids are equal, `false` otherwise
+local is_id_equal = function(first, second)
+  return first[1] == second[1] and first[2] == second[2]
 end
 
+--- Run the given function in async context
+-- @tparam function fun - the function to run
+-- @tparam varargs ... - arguments passed to this function
 local async = function(fun, ...)
   local args = { ... }
 
@@ -49,6 +60,11 @@ local async = function(fun, ...)
   end)
 end
 
+--- Wrap the given function into another function
+-- @tparam function fun - the function to wrap
+-- @tparam varargs ... - arguments passed to the given function
+-- @treturn function - a function which when called will call the given function with the given arguments.
+-- Any additional arguments passed to this function will also be passed to the original function.
 local wrap = function(fun, ...)
   local a0 = { ... }
   return function(...)
@@ -76,21 +92,24 @@ local async_wrap = function(fun, ...)
 end
 
 --- Checks whether the given mime type is for a text file.
+-- @tparam string mime - mime type to check for
+-- @treturn boolean - `true` if the mime type represents a text file, `false` otherwise
 local is_text = function(mime)
   local text = 'text'
   return mime:sub(1, #text) == text
 end
 
 --- Checks whether a local file is loaded in some buffer.
--- @return the `bufnr` if file is loaded, `false` otherwise.
-local is_open = function(name)
+-- @tparam string path - the file to check for
+-- @treturn number|boolean - the `bufnr` if file is loaded, `false` otherwise.
+local is_open = function(path)
   local bufs = api.nvim_list_bufs()
 
   for _, b in ipairs(bufs) do
     local buf_name = api.nvim_buf_get_name(b)
     local buf_is_loaded = api.nvim_buf_is_loaded(b)
 
-    if buf_is_loaded and buf_name == name then
+    if buf_is_loaded and buf_name == path then
       return b
     end
   end
