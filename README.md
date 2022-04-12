@@ -8,6 +8,9 @@ This plugin will also support managing files in remote file storage services lik
 and [Google Drive](https://drive.google.com/). This plugin uses the [files](https://github.com/SCJangra/files) crate
 so as soon as support for remote files is implemented there, it will also be available here.
 
+## Demo
+https://user-images.githubusercontent.com/40860699/162607414-e85c8162-227d-40a3-9bb4-0078e0b5d0bd.mp4
+
 ## Dependencies
 - Linux/macOS
 - neovim >= 0.7.0
