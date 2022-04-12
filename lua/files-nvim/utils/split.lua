@@ -1,4 +1,7 @@
+-- misc
 local percent = require('files-nvim.utils').percent
+
+-- Neovim builtin
 local api = vim.api
 local o = vim.o
 

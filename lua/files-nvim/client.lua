@@ -1,10 +1,14 @@
+-- Dependencies
 local a = require 'plenary.async'
 local channel = require('plenary.async.control').channel
 local uv = a.uv
+
+-- Neovim builtin
 local loop = vim.loop
 local json = vim.json
 local fn = vim.fn
 
+-- Config
 local uconf = require('files-nvim.config').get_config()
 
 local Client = {}

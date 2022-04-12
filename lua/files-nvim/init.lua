@@ -1,8 +1,14 @@
+-- Config
 local conf = require 'files-nvim.config'
-local Exp = require 'files-nvim.exp'
-local event = require 'files-nvim.event'
 
+-- Classes
+local Exp = require 'files-nvim.exp'
+
+-- Dependencies
 local run = require('plenary.async').run
+
+-- misc
+local event = require 'files-nvim.event'
 
 local exps = {}
 

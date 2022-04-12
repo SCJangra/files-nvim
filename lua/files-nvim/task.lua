@@ -1,13 +1,20 @@
+-- Dependencies
 local a_util = require 'plenary.async.util'
 
+-- Classes
 local Buf = require 'files-nvim.buf'
+
+-- Config
 local conf = require 'files-nvim.config'
 local uconf = conf.get_config()
+
+-- misc
 local utils = require 'files-nvim.utils'
 local async, wrap = utils.async, utils.wrap
 local event = require 'files-nvim.event'
 local lines = require 'files-nvim.task.prog_lines'
 
+-- Neovim builtin
 local api = vim.api
 local notify = vim.notify
 local l = vim.log.levels

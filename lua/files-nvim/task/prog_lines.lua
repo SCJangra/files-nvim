@@ -1,4 +1,7 @@
+-- Config
 local hl = require('files-nvim.config').get_config().task.hl
+
+-- misc
 local utils = require 'files-nvim.utils'
 
 local lines = {}
@@ -32,6 +35,7 @@ function lines.copy(prog)
 
   return l
 end
+
 function lines.move(prog)
   return {
     {
@@ -40,6 +44,7 @@ function lines.move(prog)
     },
   }
 end
+
 function lines.delete(prog)
   return {
     {

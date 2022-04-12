@@ -1,22 +1,25 @@
+-- Classes
 local Client = require 'files-nvim.client'
+local Navigator = require 'files-nvim.exp.navigator'
+local Buf = require 'files-nvim.buf'
+local Task = require 'files-nvim.task'
 
+-- Config
 local conf = require 'files-nvim.config'
 local uconf = conf.get_config()
 local exp = uconf.exp
 local input_opts = exp.input_opts
 
+-- misc
 local utils = require 'files-nvim.utils'
 local async, wrap = utils.async, utils.wrap
-
-local Navigator = require 'files-nvim.exp.navigator'
-local Buf = require 'files-nvim.buf'
-local Task = require 'files-nvim.task'
 local event = require 'files-nvim.event'
 
+-- Neovim builtin
 local api = vim.api
 local fn = vim.fn
-local confirm = vim.fn.confirm
 
+-- Dependencies
 local a_util = require 'plenary.async.util'
 local Line = require 'nui.line'
 local Text = require 'nui.text'
@@ -343,7 +346,7 @@ function Exp:_del_sel_files()
   local files = self:get_sel_items(self.current.files)
   local dir = self.current.dir
 
-  local choice = confirm(string.format('Delete %d items?', #files), 'Yes\nNo', 2)
+  local choice = fn.confirm(string.format('Delete %d items?', #files), 'Yes\nNo', 2)
 
   if choice ~= 1 then
     return

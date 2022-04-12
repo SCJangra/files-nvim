@@ -1,8 +1,11 @@
+-- Dependencies
 local a_util = require 'plenary.async.util'
 
+-- Config
 local pconf = require('files-nvim.config').pconf
 local split = require 'files-nvim.utils.split'
 
+-- Neovim builtin
 local api = vim.api
 local keymap = vim.keymap
 

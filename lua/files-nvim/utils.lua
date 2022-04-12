@@ -1,11 +1,14 @@
 --- Here are some utility functions that are used throughout the project.
 
+-- Dependencies
 local run = require('plenary.async').run
 local icons = require 'nvim-web-devicons'
 local Text = require 'nui.text'
 
+-- Config
 local exp_icons = require('files-nvim.config').get_config().exp.icons
 
+-- Neovim builtin
 local api = vim.api
 
 local round = function(num, idp)
