@@ -4,7 +4,7 @@ local Buf = require 'files-nvim.buf'
 local conf = require 'files-nvim.config'
 local uconf = conf.get_config()
 local utils = require 'files-nvim.utils'
-local async_wrap = utils.async_wrap
+local async, wrap = utils.async, utils.wrap
 local event = require 'files-nvim.event'
 local lines = require 'files-nvim.task.prog_lines'
 
@@ -102,8 +102,8 @@ function Task:_setup_keymaps()
   local gkm = uconf.keymaps
   local km = uconf.task.keymaps
 
-  self:map('n', gkm.quit, async_wrap(self.close, self))
-  self:map({ 'n', 'x' }, km.cancel, async_wrap(self._cancel_sel_tasks, self))
+  self:map('n', gkm.quit, wrap(async, self.close, self))
+  self:map({ 'n', 'x' }, km.cancel, wrap(async, self._cancel_sel_tasks, self))
 end
 
 function Task:_insert_task(t)

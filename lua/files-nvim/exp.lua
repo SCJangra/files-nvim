@@ -6,9 +6,7 @@ local exp = uconf.exp
 local input_opts = exp.input_opts
 
 local utils = require 'files-nvim.utils'
-local async_wrap = utils.async_wrap
-local wrap = utils.wrap
-local async = utils.async
+local async, wrap = utils.async, utils.wrap
 
 local Navigator = require 'files-nvim.exp.navigator'
 local Buf = require 'files-nvim.buf'
@@ -90,16 +88,16 @@ function Exp:_setup_keymaps()
   local km = exp.keymaps
   local gkm = uconf.keymaps
 
-  self:map('n', gkm.quit, async_wrap(self.close, self))
-  self:map('n', km.open, async_wrap(self._open_current_file, self))
-  self:map('n', km.next, async_wrap(self._nav, self, self.nav.next))
-  self:map('n', km.prev, async_wrap(self._nav, self, self.nav.prev))
-  self:map('n', km.up, async_wrap(self._nav, self, self.nav.up))
+  self:map('n', gkm.quit, wrap(async, self.close, self))
+  self:map('n', km.open, wrap(async, self._open_current_file, self))
+  self:map('n', km.next, wrap(async, self._nav, self, self.nav.next))
+  self:map('n', km.prev, wrap(async, self._nav, self, self.nav.prev))
+  self:map('n', km.up, wrap(async, self._nav, self, self.nav.up))
   self:map('n', km.show_tasks_split, wrap(self.task.open_split, self.task, 0, 'right', 40))
-  self:map({ 'n', 'x' }, km.copy, async_wrap(self._copy_to_cb, self, 'Copy'))
-  self:map({ 'n', 'x' }, km.move, async_wrap(self._copy_to_cb, self, 'Move'))
-  self:map({ 'n', 'x' }, km.delete, async_wrap(self._del_sel_files, self))
-  self:map('n', km.paste, async_wrap(self._paste, self))
+  self:map({ 'n', 'x' }, km.copy, wrap(async, self._copy_to_cb, self, 'Copy'))
+  self:map({ 'n', 'x' }, km.move, wrap(async, self._copy_to_cb, self, 'Move'))
+  self:map({ 'n', 'x' }, km.delete, wrap(async, self._del_sel_files, self))
+  self:map('n', km.paste, wrap(async, self._paste, self))
   self:map('n', km.rename, wrap(self._show_rename_dialog, self))
   self:map('n', km.create_file, wrap(self._show_create_dialog, self, 'File'))
   self:map('n', km.create_dir, wrap(self._show_create_dialog, self, 'Dir'))
@@ -359,7 +357,7 @@ function Exp:_show_rename_dialog()
   local i = Input(input_opts.rename, {
     prompt = '',
     default_value = file.name,
-    on_submit = async_wrap(self._rename, self, file, self.current.dir),
+    on_submit = wrap(async, self._rename, self, file, self.current.dir),
   })
 
   i:mount()
@@ -391,7 +389,7 @@ function Exp:_show_create_dialog(type)
   local i = Input(opts, {
     prompt = '',
     default_value = '',
-    on_submit = async_wrap(self._create, self, type, self.current.dir),
+    on_submit = wrap(async, self._create, self, type, self.current.dir),
   })
 
   i:mount()

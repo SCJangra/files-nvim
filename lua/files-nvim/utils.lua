@@ -77,20 +77,6 @@ local wrap = function(fun, ...)
   end
 end
 
-local async_wrap = function(fun, ...)
-  local a0 = { ... }
-  return function(...)
-    local a1 = { ... }
-    for _, v in ipairs(a1) do
-      table.insert(a0, v)
-    end
-
-    run(function()
-      fun(unpack(a0))
-    end)
-  end
-end
-
 --- Checks whether the given mime type is for a text file.
 -- @tparam string mime - mime type to check for
 -- @treturn boolean - `true` if the mime type represents a text file, `false` otherwise
@@ -130,7 +116,6 @@ return {
   is_id_equal = is_id_equal,
   async = async,
   wrap = wrap,
-  async_wrap = async_wrap,
   is_text = is_text,
   is_open = is_open,
   get_icon = get_icon,
