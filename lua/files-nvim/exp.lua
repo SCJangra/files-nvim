@@ -16,6 +16,7 @@ local Task = require 'files-nvim.task'
 local event = require 'files-nvim.event'
 
 local api = vim.api
+local fn = vim.fn
 local confirm = vim.fn.confirm
 
 local a_util = require 'plenary.async.util'
@@ -240,31 +241,41 @@ function Exp:_open_current_file()
 end
 
 function Exp:_open_file(file)
-  if file.id[1] ~= 'Local' then
+  if file.id[1] == 'Local' then
+    self:_open_local(file)
+  else
     print 'Currently cannot open remote files'
-    return
   end
+end
 
+function Exp:_open_local(file)
   local err, mime = self.client:get_mime(file.id)
   assert(not err, err)
 
-  if not utils.is_text(mime) then
-    print 'Not a text file'
-    return
-  end
-
   a_util.scheduler()
 
-  local winid = self.prev_winid
-  local path = file.id[2]
-  local bufnr = utils.is_open(path)
+  if not utils.is_text(mime) then
+    local os = jit.os
 
-  api.nvim_set_current_win(winid)
-
-  if bufnr then
-    api.nvim_win_set_buf(winid, bufnr)
+    if os == 'Linux' then
+      fn.jobstart({ 'xdg-open', file.id[2] }, { detach = true })
+    elseif os == 'OSX' then
+      fn.jobstart({ 'open', file.id[2] }, { detach = true })
+    else
+      assert(false, 'Cannot open files in current os!')
+    end
   else
-    api.nvim_command('edit ' .. path)
+    local winid = self.prev_winid
+    local path = file.id[2]
+    local bufnr = utils.is_open(path)
+
+    api.nvim_set_current_win(winid)
+
+    if bufnr then
+      api.nvim_win_set_buf(winid, bufnr)
+    else
+      api.nvim_command('edit ' .. path)
+    end
   end
 end
 
