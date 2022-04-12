@@ -42,8 +42,6 @@ Open explorer in current window
 Open explorer in a split  
 `:lua require('files-nvim').open_split({ 'size' }, 'win', 'left', 50)`
 
-To select multiple files to copy/move/delete got to Visual Line Mode using 'V' (Shift-v).
-
 ## Default config
 ``` lua
 {
