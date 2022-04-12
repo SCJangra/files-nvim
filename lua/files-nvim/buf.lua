@@ -24,6 +24,9 @@ function Buf:new()
   return setmetatable(b, self)
 end
 
+--- Create a new buffer and show it in the given window
+-- @tparam number winid - window to show the buffer in
+-- @tparam boolean listed - whether the buffer is listed or not
 function Buf:open_in(winid, listed)
   if self.bufnr then
     return
@@ -43,10 +46,19 @@ function Buf:open_in(winid, listed)
   self:set_buf_opts { modifiable = false }
 end
 
+--- Create a new buffer and show it in the current window
+-- @tparam boolean listed - whether the buffer is listed or not
 function Buf:open_current(listed)
   self:open_in(api.nvim_get_current_win(), listed)
 end
 
+--- Create a new buffer and show it in a new split
+-- @tparam number|string rel - tells whether the split is opened relative to a window or the editor.
+--   If this is a number, it is treated as a winid, and the split is opened relative to this window.
+--   If this is `'win'`, the split is opened relative to current window.
+--   If this is `'editor'`, the split is opened relative to the editor.
+-- @tparam string pos - position of the split, valid values are `'left'`, `'right'`, `'top'`, `'bottom'`.
+-- @tparam number size - size of the split in percentage relative to the given win or the editor.
 function Buf:open_split(rel, pos, size)
   self.prev_winid = api.nvim_get_current_win()
 
@@ -66,6 +78,7 @@ function Buf:open_split(rel, pos, size)
   self:_setup_win_opts()
 end
 
+--- Close the buffer.
 function Buf:close()
   local bufnr = self.bufnr
 
@@ -79,16 +92,20 @@ function Buf:close()
   self.prev_winid = nil
 end
 
+--- Set keymaps for the buffer.
 function Buf:map(modes, lhs, rhs)
   local opts = vim.tbl_deep_extend('force', pconf.map_opts, { buffer = self.bufnr })
 
   keymap.set(modes, lhs, rhs, opts)
 end
 
+--- Set the name of the buffer.
 function Buf:set_name(name)
   api.nvim_buf_set_name(self.bufnr, name)
 end
 
+--- Set the given options to the buffer
+-- @tparam table opts - options to set
 function Buf:set_buf_opts(opts)
   local bufnr = self.bufnr
 
@@ -97,6 +114,8 @@ function Buf:set_buf_opts(opts)
   end
 end
 
+--- Set the given options to the window this buffer was opened in
+-- @tparam table opts - options to set
 function Buf:set_win_opts(opts)
   local winid = self.winid
 
@@ -105,6 +124,8 @@ function Buf:set_win_opts(opts)
   end
 end
 
+--- Get the values of the given options
+-- @tparam table opts - options
 function Buf:get_buf_opts(opts)
   local bufnr = self.bufnr
   local o = {}
@@ -116,6 +137,8 @@ function Buf:get_buf_opts(opts)
   return o
 end
 
+--- Get the values of the given options
+-- @tparam table opts - options
 function Buf:get_win_opts(opts)
   local winid = self.winid
   local o = {}
@@ -127,6 +150,9 @@ function Buf:get_win_opts(opts)
   return o
 end
 
+--- Run the given function in context of the given buffer options
+-- @tparam table opts - options
+-- @tparam function fun - function to run
 function Buf:with_buf_opts(opts, fun)
   local backup_opts = self:get_buf_opts(vim.tbl_keys(opts))
 
@@ -135,6 +161,9 @@ function Buf:with_buf_opts(opts, fun)
   self:set_buf_opts(backup_opts)
 end
 
+--- Run the given function in context of the given window options
+-- @tparam table opts - options
+-- @tparam function fun - function to run
 function Buf:with_win_opts(opts, fun)
   local backup_opts = self:get_win_opts(vim.tbl_keys(opts))
 
@@ -143,11 +172,18 @@ function Buf:with_win_opts(opts, fun)
   self:set_win_opts(backup_opts)
 end
 
+--- Returns the item under cursor
+-- @tparam array items - the array from which to retrive the item
+-- @return the item under cursor
+-- @treturn number - index of the item in the given items array
 function Buf:get_current_item(items)
   local index = api.nvim_win_get_cursor(self.winid)[1]
   return items[index], index
 end
 
+--- Returns currently selected items
+-- @tparam array items - the array from which to retrive the items
+-- @return the selected items
 function Buf:get_sel_items(items)
   local r = self:_get_sel_range()
 
@@ -160,6 +196,8 @@ function Buf:get_sel_items(items)
   return sel_items
 end
 
+--- Returns the range of lines that are currently selected
+-- @treturn {number,number} - the range of current selection
 function Buf:_get_sel_range()
   a_util.scheduler()
 
@@ -194,6 +232,7 @@ function Buf:_get_sel_range()
   return range
 end
 
+--- Set initial options for the window
 function Buf:_setup_win_opts()
   self:set_win_opts {
     number = false,

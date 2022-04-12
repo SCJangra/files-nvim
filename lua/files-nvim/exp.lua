@@ -196,6 +196,9 @@ function Exp:_setup()
   self:set_name 'FilesNvim'
 end
 
+--- Navigate the explorer using the given function
+-- @tparam function fun - the function to use for navigation
+-- @tparam varargs ... - arguments that are passed to the navigation function
 function Exp:_nav(fun, ...)
   local dir, files = fun(self.nav, ...)
 
@@ -203,7 +206,7 @@ function Exp:_nav(fun, ...)
     return
   end
 
-  self:_set(dir, files)
+  self:_view(dir, files)
 end
 
 function Exp:_to_line(file)
@@ -245,10 +248,12 @@ function Exp:_open_file(file)
   if file.id[1] == 'Local' then
     self:_open_local(file)
   else
-    print 'Currently cannot open remote files'
+    assert(false, 'Currently cannot open remote files')
   end
 end
 
+--- Use this function to open a local file
+-- @tparam table file - file to open
 function Exp:_open_local(file)
   local err, mime = self.client:get_mime(file.id)
   assert(not err, err)
@@ -280,7 +285,10 @@ function Exp:_open_local(file)
   end
 end
 
-function Exp:_set(dir, files)
+--- View the given files in the explorer
+-- @tparam table dir - parent directory of the files
+-- @tparam {table,...} - files to view
+function Exp:_view(dir, files)
   a_util.scheduler()
 
   local cur = self.current
@@ -311,7 +319,7 @@ function Exp:_refresh()
 
   local cursor_pos = api.nvim_win_get_cursor(winid)
 
-  self:_set(dir, files)
+  self:_view(dir, files)
 
   local line_count = api.nvim_buf_line_count(self.bufnr)
 
@@ -322,6 +330,8 @@ function Exp:_refresh()
   end
 end
 
+--- Copy selected files to clipboard
+-- @tparam string action - action associated with these files, can be either `'Copy'` or `'Move'`
 function Exp:_copy_to_cb(action)
   local cb = self.cb
 
@@ -331,6 +341,7 @@ function Exp:_copy_to_cb(action)
   cb.files = files
 end
 
+--- Paste files from clipboard to the current directory
 function Exp:_paste()
   local cb = self.cb
   local c = self.current
@@ -342,6 +353,7 @@ function Exp:_paste()
   end
 end
 
+--- Delete selected files
 function Exp:_del_sel_files()
   local files = self:get_sel_items(self.current.files)
   local dir = self.current.dir
