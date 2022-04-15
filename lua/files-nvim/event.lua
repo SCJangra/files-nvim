@@ -5,23 +5,23 @@ local handlers = {
   -- for these events
 
   -- task_id, files, dest_dir
-  copy_start = {},
+  copy_all_start = {},
   -- task_id, progress
-  copy_prog = {},
+  copy_all_prog = {},
   -- task_id
-  copy_end = {},
+  copy_all_end = {},
   -- task_id, files, dest_dir
-  move_start = {},
+  mv_all_start = {},
   -- task_id, progress
-  move_prog = {},
+  mv_all_prog = {},
   -- task_id
-  move_end = {},
+  mv_all_end = {},
   -- task_id, files, from_dir
-  delete_start = {},
+  delete_all_start = {},
   -- task_id, progress
-  delete_prog = {},
+  delete_all_prog = {},
   -- task_id
-  delete_end = {},
+  delete_all_end = {},
   -- file_old, file_new, dir
   renamed = {},
   -- type, file, dir

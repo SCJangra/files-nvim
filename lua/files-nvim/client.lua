@@ -227,24 +227,24 @@ function Client:rename(id, new_name)
   return self:request('rename', { id, new_name })
 end
 
-function Client:move_file(id, dest_id)
-  return self:request('move_file', { id, dest_id })
+function Client:mv(id, dest_id)
+  return self:request('mv', { id, dest_id })
 end
 
 function Client:get_mime(id)
   return self:request('get_mime', { id })
 end
 
-function Client:copy(files, dst, prog_interval, on_prog)
-  return self:subscribe('copy', { files, dst, prog_interval or uconf.task.cp_interval }, on_prog)
+function Client:copy_all(files, dst, prog_interval, on_prog)
+  return self:subscribe('copy_all', { files, dst, prog_interval or uconf.task.cp_interval }, on_prog)
 end
 
-function Client:move(files, dst, on_prog)
-  return self:subscribe('move', { files, dst }, on_prog)
+function Client:mv_all(files, dst, on_prog)
+  return self:subscribe('mv_all', { files, dst }, on_prog)
 end
 
-function Client:delete(files, on_prog)
-  return self:subscribe('delete', { files }, on_prog)
+function Client:delete_all(files, on_prog)
+  return self:subscribe('delete_all', { files }, on_prog)
 end
 
 return Client

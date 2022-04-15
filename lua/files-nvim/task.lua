@@ -50,17 +50,17 @@ end
 
 function Task:copy(files, dst, prog_interval)
   local msg = string.format('Copy %d items to %s %s', #files, utils.get_icon(dst), dst.name)
-  self:_run(msg, 'copy', files, dst, prog_interval)
+  self:_run(msg, 'copy_all', files, dst, prog_interval)
 end
 
 function Task:move(files, dst)
   local msg = string.format('Move %d items to %s %s', #files, utils.get_icon(dst), dst.name)
-  self:_run(msg, 'move', files, dst)
+  self:_run(msg, 'mv_all', files, dst)
 end
 
 function Task:delete(files, dir)
   local msg = string.format('Delete %d items from %s %s', #files, utils.get_icon(dir), dir.name)
-  self:_run(msg, 'delete', files, dir)
+  self:_run(msg, 'delete_all', files, dir)
 end
 
 function Task:_run(msg, method, ...)
@@ -73,7 +73,7 @@ function Task:_run(msg, method, ...)
   }
 
   local args
-  if method == 'delete' then
+  if method == 'delete_all' then
     args = { ... }
     args[#args] = nil
   else

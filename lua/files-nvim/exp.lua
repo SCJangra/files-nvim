@@ -115,30 +115,30 @@ function Exp:_setup_fs_events()
   local c = self.current
   local is_id_equal = utils.is_id_equal
 
-  event:on('copy_start', function(id, files, dest)
+  event:on('copy_all_start', function(id, files, dest)
     copy[id] = {
       files = files,
       dest = dest,
     }
   end)
-  event:on('copy_prog', function(id, _)
+  event:on('copy_all_prog', function(id, _)
     if not is_id_equal(c.dir.id, copy[id].dest.id) then
       return
     end
 
     async(self._refresh, self)
   end)
-  event:on('copy_end', function(id)
+  event:on('copy_all_end', function(id)
     copy[id] = nil
   end)
 
-  event:on('move_start', function(id, files, dest)
+  event:on('mv_all_start', function(id, files, dest)
     move[id] = {
       files = files,
       dest = dest,
     }
   end)
-  event:on('move_end', function(id)
+  event:on('mv_all_end', function(id)
     if not is_id_equal(c.dir.id, move[id].dest.id) then
       return
     end
@@ -147,13 +147,13 @@ function Exp:_setup_fs_events()
     move[id] = nil
   end)
 
-  event:on('delete_start', function(id, files, dir)
+  event:on('delete_all_start', function(id, files, dir)
     delete[id] = {
       files = files,
       dir = dir,
     }
   end)
-  event:on('delete_end', function(id)
+  event:on('delete_all_end', function(id)
     if not is_id_equal(c.dir.id, delete[id].dir.id) then
       return
     end

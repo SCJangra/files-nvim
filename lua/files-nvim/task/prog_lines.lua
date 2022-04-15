@@ -6,7 +6,7 @@ local utils = require 'files-nvim.utils'
 
 local lines = {}
 
-function lines.copy(prog)
+function lines.copy_all(prog)
   local f = prog.files
   local s = prog.size
   local c = prog.current
@@ -36,7 +36,7 @@ function lines.copy(prog)
   return l
 end
 
-function lines.move(prog)
+function lines.mv_all(prog)
   return {
     {
       { '  Progress: ', hl.prog_key },
@@ -45,7 +45,7 @@ function lines.move(prog)
   }
 end
 
-function lines.delete(prog)
+function lines.delete_all(prog)
   return {
     {
       { '  Progress: ', hl.prog_key },
