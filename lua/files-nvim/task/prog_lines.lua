@@ -36,16 +36,7 @@ function lines.copy_all(prog)
   return l
 end
 
-function lines.mv_all(prog)
-  return {
-    {
-      { '  Progress: ', hl.prog_key },
-      { string.format('%d / %d', prog.done, prog.total), hl.prog_val },
-    },
-  }
-end
-
-function lines.delete_all(prog)
+function lines.prog(prog)
   return {
     {
       { '  Progress: ', hl.prog_key },

@@ -26,7 +26,7 @@ local open = function(mode, fields, ...)
   end)
 end
 
-event:on('exp_closed', function(e)
+event.exp_closed:add(function(e)
   exps[e] = nil
 end)
 

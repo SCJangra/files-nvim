@@ -84,7 +84,7 @@ function Exp:close()
   getmetatable(getmetatable(self).__index).__index.close(self)
 
   self.client:stop()
-  event:broadcast('exp_closed', self)
+  event.exp_closed:broadcast(self)
 end
 
 function Exp:_setup_keymaps()
@@ -107,70 +107,11 @@ function Exp:_setup_keymaps()
 end
 
 function Exp:_setup_fs_events()
-  local tasks = self.active_tasks
-  local copy = tasks.copy
-  local move = tasks.move
-  local delete = tasks.delete
-
   local c = self.current
   local is_id_equal = utils.is_id_equal
 
-  event:on('copy_all_start', function(id, files, dest)
-    copy[id] = {
-      files = files,
-      dest = dest,
-    }
-  end)
-  event:on('copy_all_prog', function(id, _)
-    if not is_id_equal(c.dir.id, copy[id].dest.id) then
-      return
-    end
-
-    async(self._refresh, self)
-  end)
-  event:on('copy_all_end', function(id)
-    copy[id] = nil
-  end)
-
-  event:on('mv_all_start', function(id, files, dest)
-    move[id] = {
-      files = files,
-      dest = dest,
-    }
-  end)
-  event:on('mv_all_end', function(id)
-    if not is_id_equal(c.dir.id, move[id].dest.id) then
-      return
-    end
-
-    async(self._refresh, self)
-    move[id] = nil
-  end)
-
-  event:on('delete_all_start', function(id, files, dir)
-    delete[id] = {
-      files = files,
-      dir = dir,
-    }
-  end)
-  event:on('delete_all_end', function(id)
-    if not is_id_equal(c.dir.id, delete[id].dir.id) then
-      return
-    end
-
-    async(self._refresh, self)
-    delete[id] = nil
-  end)
-
-  event:on('renamed', function(_, _, dir)
-    if not is_id_equal(dir.id, c.dir.id) then
-      return
-    end
-
-    async(self._refresh, self)
-  end)
-  event:on('created', function(_, _, dir)
-    if not is_id_equal(dir.id, c.dir.id) then
+  event.dir_modified:add(function(dir_id)
+    if not is_id_equal(c.dir.id, dir_id) then
       return
     end
 
@@ -379,15 +320,7 @@ function Exp:_show_rename_dialog()
 end
 
 function Exp:_rename(file, dir, new_name)
-  local client = self.client
-
-  local err, id = client:rename(file.id, new_name)
-  assert(not err, err)
-
-  local err, new_file = client:get_meta(id)
-  assert(not err, err)
-
-  event:broadcast('renamed', file, new_file, dir)
+  self.task:rename({ { file, new_name } }, dir)
 end
 
 function Exp:_show_create_dialog(type)
@@ -412,21 +345,18 @@ end
 
 function Exp:_create(type, dir, name)
   local client = self.client
-  local err, id
+  local err
 
   if type == 'File' then
-    err, id = client:create_file(name, dir.id)
+    err = client:create_file(name, dir.id)
   elseif type == 'Dir' then
-    err, id = client:create_dir(name, dir.id)
+    err = client:create_dir(name, dir.id)
   else
     return
   end
   assert(not err, err)
 
-  local err, file = client:get_meta(id)
-  assert(not err, err)
-
-  event:broadcast('created', type, file, dir)
+  event.dir_modified:broadcast(dir.id)
 end
 
 return Exp

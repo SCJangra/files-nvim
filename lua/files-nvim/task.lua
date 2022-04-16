@@ -50,38 +50,44 @@ end
 
 function Task:copy(files, dst, prog_interval)
   local msg = string.format('Copy %d items to %s %s', #files, utils.get_icon(dst), dst.name)
-  self:_run(msg, 'copy_all', files, dst, prog_interval)
+  local prog_fn = function(_)
+    event.dir_modified:broadcast(dst.id)
+  end
+  local fn = wrap(self.client.copy_all, self.client, files, dst, prog_interval)
+
+  self:_run(msg, fn, lines.copy_all, nil, prog_fn, nil)
 end
 
 function Task:move(files, dst)
-  local msg = string.format('Move %d items to %s %s', #files, utils.get_icon(dst), dst.name)
-  self:_run(msg, 'mv_all', files, dst)
+  local msg = string.format('Move %d files to %s %s', #files, utils.get_icon(dst), dst.name)
+  local fn = wrap(self.client.mv_all, self.client, files, dst)
+
+  self:_run(msg, fn, lines.prog)
+  event.dir_modified:broadcast(dst.id)
 end
 
 function Task:delete(files, dir)
   local msg = string.format('Delete %d items from %s %s', #files, utils.get_icon(dir), dir.name)
-  self:_run(msg, 'delete_all', files, dir)
+  local fn = wrap(self.client.delete_all, self.client, files)
+
+  self:_run(msg, fn, lines.prog)
+  event.dir_modified:broadcast(dir.id)
 end
 
-function Task:_run(msg, method, ...)
-  local m_start = method .. '_start'
-  local m_prog = method .. '_prog'
-  local m_end = method .. '_end'
+function Task:rename(rns, dir)
+  local msg = string.format('Rename %d files', #rns)
+  local fn = wrap(self.client.rename_all, self.client, rns)
 
+  self:_run(msg, fn, lines.prog)
+  event.dir_modified:broadcast(dir.id)
+end
+
+function Task:_run(msg, fn, lines_fn, start_fn, prog_fn, end_fn)
   local t = {
     message = msg,
   }
 
-  local args
-  if method == 'delete_all' then
-    args = { ... }
-    args[#args] = nil
-  else
-    args = { ... }
-  end
-
-  local err, id, cancel, wait
-  err, id, cancel, wait = self.client:subscribe(method, args, function(err, res)
+  local err, _, cancel, wait = fn(function(err, prog)
     if err then
       schedule(function()
         notify(err, l.ERROR)
@@ -89,19 +95,26 @@ function Task:_run(msg, method, ...)
       return
     end
 
-    event:broadcast(m_prog, id, res)
-    self:_show_prog(t, lines[method](res))
+    if prog_fn then
+      prog_fn(prog)
+    end
+
+    self:_show_prog(t, lines_fn(prog))
   end)
   assert(not err, err)
 
   t.cancel = cancel
 
-  event:broadcast(m_start, id, ...)
+  if start_fn then
+    start_fn()
+  end
   self:_insert_task(t)
 
   wait()
 
-  event:broadcast(m_end, id)
+  if end_fn then
+    end_fn()
+  end
   self:_remove_task(t)
 end
 
