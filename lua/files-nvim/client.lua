@@ -247,4 +247,8 @@ function Client:delete_all(files, on_prog)
   return self:subscribe('delete_all', { files }, on_prog)
 end
 
+function Client:rename_all(rns, on_prog)
+  return self:subscribe('rename_all', { rns }, on_prog)
+end
+
 return Client
