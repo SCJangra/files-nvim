@@ -76,7 +76,7 @@ local wrap = function(fun, ...)
       table.insert(a0, v)
     end
 
-    fun(unpack(a0))
+    return fun(unpack(a0))
   end
 end
 
