@@ -6,10 +6,11 @@ local uv = a.uv
 -- Neovim builtin
 local loop = vim.loop
 local json = vim.json
-local fn = vim.fn
 
 -- Config
-local uconf = require('files-nvim.config').get_config()
+local conf = require 'files-nvim.config'
+local uconf = conf.get_config()
+local pconf = conf.pconf
 
 local Client = {}
 
@@ -18,43 +19,21 @@ function Client:new()
   local c = {
     jrpc_ver = '2.0',
     pipe = loop.new_pipe(false),
-    job_id = nil,
     res = {},
     nt = {},
     mid = 0,
+    is_running = false,
   }
   return setmetatable(c, { __index = self })
 end
 
 --- Start rpc server
 function Client:start()
-  if self.job_id then
+  if self.is_running then
     return
   end
 
-  local sock = os.tmpname()
-
-  local s, r = channel.oneshot()
-  local started = false
-
-  self.job_id = fn.jobstart({ fn.stdpath 'data' .. '/files-ipc', sock }, {
-    on_stdout = function()
-      if started then
-        return
-      end
-
-      started = true
-      a.run(function()
-        s()
-      end)
-    end,
-  })
-  assert(self.job_id ~= 0, 'Invalid arguments to ipc server')
-  assert(self.job_id ~= -1, 'server binary is not executable')
-
-  r()
-
-  local err = uv.pipe_connect(self.pipe, sock)
+  local err = uv.pipe_connect(self.pipe, pconf.socket)
   assert(not err, err)
 
   self:_read_start()
@@ -124,12 +103,10 @@ end
 
 --- Stop rpc server
 function Client:stop()
-  if not self.job_id then
+  if not self.is_running then
     return
   end
 
-  fn.jobstop(self.job_id)
-  self.job_id = nil
   self.pipe:close()
 end
 

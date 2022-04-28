@@ -100,6 +100,7 @@ local pconf = {
     noremap = true,
     silent = true,
   },
+  socket = nil,
 }
 
 local set_config = function(c)
