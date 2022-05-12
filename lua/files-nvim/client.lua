@@ -33,7 +33,7 @@ function Client:start()
     return
   end
 
-  local err = uv.pipe_connect(self.pipe, pconf.socket)
+  local err = uv.pipe_connect(self.pipe, pconf:get_socket_addr())
   assert(not err, err)
 
   self:_read_start()

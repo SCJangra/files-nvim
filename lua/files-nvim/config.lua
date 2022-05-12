@@ -100,7 +100,11 @@ local pconf = {
     noremap = true,
     silent = true,
   },
-  socket = nil,
+  socket = 'socket',
+  tmp = nil,
+  get_socket_addr = function(self)
+    return self.tmp .. '/' .. self.socket
+  end,
 }
 
 local set_config = function(c)

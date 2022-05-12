@@ -11,21 +11,36 @@ local Client = require 'files-nvim.client'
 -- Dependencies
 local run = require('plenary.async').run
 local channel = require('plenary.async.control').channel
+local uv = require('plenary.async').uv
+local a_util = require 'plenary.async.util'
 
 -- misc
 local event = require 'files-nvim.event'
 local fn = vim.fn
+local api = vim.api
 
 local exps = {}
 
 local start_server = function()
-  pconf.socket = os.tmpname()
+  pconf.tmp = os.tmpname()
+
+  local err, _ = uv.fs_unlink(pconf.tmp)
+  assert(not err, err)
+
+  local err, _ = uv.fs_mkdir(pconf.tmp, 448) -- 448 is 700 in octal
+  assert(not err, err)
+
+  a_util.scheduler()
+
+  api.nvim_create_autocmd({ 'VimLeavePre' }, {
+    command = '!rm -rf ' .. pconf.tmp,
+  })
 
   local s, r = channel.oneshot()
 
   local started = false
 
-  local job_id = fn.jobstart({ fn.stdpath 'data' .. '/files-ipc', pconf.socket }, {
+  local job_id = fn.jobstart({ fn.stdpath 'data' .. '/files-ipc', pconf:get_socket_addr() }, {
     on_stdout = function()
       if started then
         return
@@ -51,7 +66,7 @@ local open = function(mode, fields, ...)
   local args = { ... }
 
   run(function()
-    if not pconf.socket then
+    if not pconf.tmp then
       start_server()
     end
 
