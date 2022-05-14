@@ -3,6 +3,7 @@ local Client = require 'files-nvim.client'
 local Navigator = require 'files-nvim.exp.navigator'
 local Buf = require 'files-nvim.buf'
 local Task = require 'files-nvim.task'
+local Ren = require 'files-nvim.ren'
 
 -- Config
 local conf = require 'files-nvim.config'
@@ -103,7 +104,7 @@ function Exp:_setup_keymaps()
   self:map({ 'n', 'x' }, km.move, wrap(async, self._copy_to_cb, self, 'Move'))
   self:map({ 'n', 'x' }, km.delete, wrap(async, self._del_sel_files, self))
   self:map('n', km.paste, wrap(async, self._paste, self))
-  self:map('n', km.rename, wrap(self._show_rename_dialog, self))
+  self:map({ 'n', 'x' }, km.rename, wrap(async, self._rename, self))
   self:map('n', km.create_file, wrap(self._show_create_dialog, self, 'File'))
   self:map('n', km.create_dir, wrap(self._show_create_dialog, self, 'Dir'))
 end
@@ -309,20 +310,28 @@ function Exp:_del_sel_files()
   self.task:delete(files, dir)
 end
 
-function Exp:_show_rename_dialog()
-  local file = self:get_current_item(self.current.files)
-
+function Exp:_show_rename_dialog(file)
   local i = Input(input_opts.rename, {
     prompt = '',
     default_value = file.name,
-    on_submit = wrap(async, self._rename, self, file, self.current.dir),
+    on_submit = function(new_name)
+      async(self.task.rename, self.task, { { file, new_name } }, self.current.dir)
+    end,
   })
 
   i:mount()
 end
 
-function Exp:_rename(file, dir, new_name)
-  self.task:rename({ { file, new_name } }, dir)
+function Exp:_rename()
+  local files = self:get_sel_items(self.current.files)
+
+  if #files == 1 then
+    self:_show_rename_dialog(files[1])
+  else
+    local r = Ren:new(self.task)
+    r:open_split('win', 'left', 30)
+    r:set_files(files, self.current.dir)
+  end
 end
 
 function Exp:_show_create_dialog(type)

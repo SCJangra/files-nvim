@@ -29,6 +29,7 @@ local uconf = {
       paste = 'p', -- paste files from the clipboard in the current directory
       delete = 'd', -- delete selected files
       rename = 'r', -- rename the file under cursor
+      close_and_rename = 'Q', -- this only applyies in the rename buffer
       create_file = 'af', -- create a new file in current directory
       create_dir = 'ad', -- create a new directory in current directory
       show_tasks_split = 'ts', -- open task viewer/manager
