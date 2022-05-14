@@ -119,10 +119,10 @@ function Task:_run(msg, fn, lines_fn, start_fn, prog_fn, end_fn)
 end
 
 function Task:_setup_keymaps()
-  local gkm = uconf.keymaps
+  getmetatable(getmetatable(self).__index).__index._setup_keymaps(self)
+
   local km = uconf.task.keymaps
 
-  self:map('n', gkm.quit, wrap(async, self.close, self))
   self:map({ 'n', 'x' }, km.cancel, wrap(async, self._cancel_sel_tasks, self))
 end
 

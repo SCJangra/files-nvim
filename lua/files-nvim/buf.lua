@@ -2,8 +2,14 @@
 local a_util = require 'plenary.async.util'
 
 -- Config
-local pconf = require('files-nvim.config').pconf
+local conf = require 'files-nvim.config'
+local uconf = conf.get_config()
+local pconf = conf.pconf
+
+-- misc
+local utils = require 'files-nvim.utils'
 local split = require 'files-nvim.utils.split'
+local wrap = utils.wrap
 
 -- Neovim builtin
 local api = vim.api
@@ -15,6 +21,7 @@ function Buf:new()
   local b = {
     bufnr = nil,
     winid = nil,
+    close_win = false,
     prev_winid = nil,
     ns_id = api.nvim_create_namespace '',
   }
@@ -44,6 +51,7 @@ function Buf:open_in(winid, listed)
   self.bufnr = bufnr
 
   self:set_buf_opts { modifiable = false }
+  self:_setup_keymaps()
 end
 
 --- Create a new buffer and show it in the current window
@@ -74,6 +82,8 @@ function Buf:open_split(rel, pos, size)
     assert(false, "Invalid value for 'rel'")
   end
 
+  self.close_win = true
+
   self:open_in(winid, false)
   self:_setup_win_opts()
 end
@@ -84,6 +94,10 @@ function Buf:close()
 
   if not bufnr then
     return
+  end
+
+  if self.close_win then
+    api.nvim_win_close(self.winid, true)
   end
 
   api.nvim_buf_clear_namespace(bufnr, self.ns_id, 0, -1)
@@ -230,6 +244,12 @@ function Buf:_get_sel_range()
   end
 
   return range
+end
+
+function Buf:_setup_keymaps()
+  local gkm = uconf.keymaps
+
+  self:map('n', gkm.quit, wrap(self.close, self))
 end
 
 --- Set initial options for the window

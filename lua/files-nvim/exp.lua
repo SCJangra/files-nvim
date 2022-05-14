@@ -88,6 +88,8 @@ function Exp:close()
 end
 
 function Exp:_setup_keymaps()
+  getmetatable(getmetatable(self).__index).__index._setup_keymaps(self)
+
   local km = exp.keymaps
   local gkm = uconf.keymaps
 
