@@ -141,9 +141,9 @@ impl Explorer {
 		buf.set_name("FilesNvim")?;
 		win.set_buf(&buf)?;
 
-		OPEN_EXPS.insert(buf.clone(), exp.clone());
+		Self::insert(buf.clone(), exp);
 
-		let mut exp = OPEN_EXPS.get_mut(&buf).ok_or_else(|| Error::NoExplorer(buf))?;
+		let mut exp = Self::get_mut(&buf)?;
 
 		exp.setup_keymaps()?;
 		exp.list(dir)?;
@@ -162,5 +162,10 @@ impl Explorer {
 			.remove(buf)
 			.ok_or_else(|| Error::NoExplorer(buf.clone()))
 			.map(|(_, exp)| exp)
+	}
+
+	#[inline(always)]
+	fn insert(buf: Buffer, exp: Self) {
+		OPEN_EXPS.insert(buf, exp);
 	}
 }
