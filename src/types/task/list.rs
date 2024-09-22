@@ -2,8 +2,7 @@ use nvim_oxi::libuv::AsyncHandle;
 use std::sync::{mpsc::Sender, Arc};
 use tokio_stream::{wrappers::ReadDirStream, StreamExt};
 
-use crate::{traits::*, types::Result, ArcPath, DIR_CACHE};
-use crate::{types::File, ArcFiles};
+use crate::{traits, types::*, DIR_CACHE};
 
 /// List the files of a directory.
 #[derive(derive_more::Debug)]
@@ -38,7 +37,23 @@ impl List {
 
 		let files = files
 			.filter_map(|r| r.ok())
-			.map(|d| File { path: d.path() })
+			.then(|d| async move {
+				let path = d.path();
+				let meta = tokio::fs::metadata(&path).await?;
+
+				let ty = if meta.is_file() {
+					FileType::File
+				} else if meta.is_dir() {
+					FileType::Directory
+				} else if meta.is_symlink() {
+					FileType::Symlink
+				} else {
+					FileType::Unknown
+				};
+
+				Ok::<_, tokio::io::Error>(File { path: ArcPath::new(path), ty })
+			})
+			.filter_map(|res| res.ok())
 			.collect::<Vec<_>>()
 			.await;
 
@@ -50,7 +65,7 @@ impl List {
 	}
 }
 
-impl Task for List {
+impl traits::Task for List {
 	type Result = Vec<File>;
 
 	async fn execute(self) {

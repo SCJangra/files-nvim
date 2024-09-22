@@ -18,6 +18,9 @@ pub enum Error {
 
 	#[error("NoExplorer({0})")]
 	NoExplorer(Buffer),
+
+	#[error("NoFile({0})")]
+	NoFile(usize),
 }
 
 impl From<oxi::api::Error> for Error {

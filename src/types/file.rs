@@ -3,7 +3,16 @@ use std::{path::PathBuf, sync::Arc};
 /// A file.
 #[derive(Debug)]
 pub struct File {
-	pub path: PathBuf,
+	pub path: ArcPath,
+	pub ty: FileType,
+}
+
+#[derive(Debug)]
+pub enum FileType {
+	File,
+	Directory,
+	Symlink,
+	Unknown,
 }
 
 /// Reference to a vector of files.

@@ -9,18 +9,24 @@ use nvim_oxi::{
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use crate::traits::LogErr;
+use crate::{traits::LogErr, ExplorerConfig, ExplorerKeymaps};
 
 /// Global configuration of the plugin.
-static mut CONFIG: Lazy<Arc<Config>> = Lazy::new(|| Arc::new(Config {}));
+static mut CONFIG: Lazy<Arc<Config>> = Lazy::new(|| {
+	Arc::new(Config {
+		explorer: ExplorerConfig { keymaps: ExplorerKeymaps { quit: String::from("q"), enter: String::from("<CR>") } },
+	})
+});
 
 /// Configuration of this plugin.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Config {}
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Config {
+	pub explorer: ExplorerConfig,
+}
 
 impl Config {
 	/// Get an [`Arc`] to the global config.
-	pub fn _arc_clone() -> Arc<Self> {
+	pub fn arc_clone() -> Arc<Self> {
 		unsafe { Arc::clone(&*CONFIG) }
 	}
 
