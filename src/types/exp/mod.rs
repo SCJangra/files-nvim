@@ -51,7 +51,7 @@ impl Explorer {
 	}
 
 	/// List the files of `dir` in the explorer.
-	pub fn list(&mut self, dir: ArcPath) -> Result<()> {
+	fn list(&mut self, dir: ArcPath) -> Result<()> {
 		let (sender, receiver) = mpsc::channel::<ListResult>();
 
 		let mut buf = self.buf.clone();
@@ -79,7 +79,8 @@ impl Explorer {
 		Ok(())
 	}
 
-	pub fn enter(&mut self) -> Result<()> {
+	/// Open the file or enter the directory under cursor.
+	fn enter(&mut self) -> Result<()> {
 		let win = api::get_current_win();
 		let buf = win.get_buf()?;
 
@@ -101,7 +102,8 @@ impl Explorer {
 		Ok(())
 	}
 
-	pub fn quit(self) -> Result<()> {
+	/// Exit this explorer.
+	fn quit(self) -> Result<()> {
 		self.buf
 			.delete(&BufDeleteOpts::builder().force(true).build())
 			.map_err(Into::into)
@@ -121,12 +123,12 @@ impl Explorer {
 		SetKeymapOpts::builder().callback(cb).build()
 	}
 
-	/// Launch a new instance of the ['explorer'](Explorer) in the current window.
+	/// Launch a new instance of the explorer in the current window.
 	pub fn open_current(_: ()) {
 		Self::open(OpenIn::CurrentWin).ok();
 	}
 
-	/// Launch a new instance of the [`explorer`](Explorer).
+	/// Launch a new instance of the explorer.
 	fn open(open: OpenIn) -> Result<()> {
 		let mut buf = api::create_buf(true, true)?;
 		let dir = std::env::current_dir()?;
