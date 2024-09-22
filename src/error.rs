@@ -35,12 +35,13 @@ impl From<oxi::libuv::Error> for Error {
 	}
 }
 
-impl<T> LogErr for Result<T, Error> {
-	fn log_err(self) -> Self {
-		if let Err(ref err) = self {
-			nvim_oxi::print!("Error: {err}");
-		}
+impl LogErr for Error {
+	fn log_err(&self) {
+		nvim_oxi::print!("Error: {self}");
+	}
 
+	fn log_error(self) -> Self {
+		self.log_err();
 		self
 	}
 }

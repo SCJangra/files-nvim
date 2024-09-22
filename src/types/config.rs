@@ -38,12 +38,12 @@ impl Config {
 	/// Get a global Neovim [`Object`] that represents the current configuration. This clones the
 	/// global config.
 	pub fn get_config(_: ()) -> Option<Object> {
-		Self::clone().to_object().log_err().ok()
+		Self::clone().to_object().log_error().ok()
 	}
 
 	/// Replace the current configuration by the given [`Object`].
 	pub fn set_config(object: Object) {
-		let Ok(config) = Self::from_object(object).log_err() else { return };
+		let Ok(config) = Self::from_object(object).log_error() else { return };
 		unsafe { *CONFIG = Arc::new(config) };
 	}
 }

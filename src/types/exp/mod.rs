@@ -16,7 +16,7 @@ use nvim_oxi::{
 	libuv::AsyncHandle,
 };
 
-use crate::{error::*, traits::LogErr, types::*, CHANNEL};
+use crate::{error::*, types::*, CHANNEL};
 
 /// A map from [`Buffer`] to [`Explorer`] for all active explorers.
 static OPEN_EXPS: LazyLock<DashMap<Buffer, Explorer>> = LazyLock::new(DashMap::new);
@@ -36,11 +36,6 @@ pub enum OpenIn {
 }
 
 impl Explorer {
-	/// Open new explorer in the current window.
-	pub fn open_current(_: ()) {
-		Self::open(OpenIn::CurrentWin).log_err().ok();
-	}
-
 	/// Setup key mappings for this explorer.
 	pub fn setup_keymaps(&mut self) -> Result<()> {
 		// NOTE: Key maps won't automatically refresh if the configuration is changed.
@@ -60,7 +55,7 @@ impl Explorer {
 		let (sender, receiver) = mpsc::channel::<ListResult>();
 
 		let mut buf = self.buf.clone();
-		let mut do_list = move || {
+		let handler = AsyncHandle::new(move || {
 			let response = receiver.recv()??;
 			let lines = response
 				.files
@@ -75,9 +70,7 @@ impl Explorer {
 			exp.files = response.files;
 
 			Ok::<_, Error>(())
-		};
-
-		let handler = AsyncHandle::new(move || do_list().log_err())?;
+		})?;
 
 		let list = Task::List(List::new(dir, handler, sender));
 
@@ -96,7 +89,7 @@ impl Explorer {
 
 		// 0 is row, and row is 1-indexed
 		let index = win.get_cursor()?.0.saturating_sub(1);
-		let file = self.files.get(index).ok_or(Error::NoFile(index))?;
+		let file = self.files.get(index).ok_or_else(|| Error::NoFile(index))?;
 
 		match file.ty {
 			FileType::Directory => self.list(Arc::clone(&file.path))?,
@@ -116,20 +109,26 @@ impl Explorer {
 
 	fn map_enter(buf: Buffer) -> SetKeymapOpts {
 		let cb = move |_| {
-			let Ok(mut exp) = Self::get_mut(&buf).log_err() else { return };
-			exp.enter().log_err().ok();
+			let Ok(mut exp) = Self::get_mut(&buf) else { return };
+			exp.enter().ok();
 		};
 
 		SetKeymapOpts::builder().callback(cb).build()
 	}
 
 	fn map_quit(buf: Buffer) -> SetKeymapOpts {
-		let cb = move |_| Self::remove(&buf).and_then(|exp| exp.quit()).log_err();
+		let cb = move |_| Self::remove(&buf).and_then(|exp| exp.quit());
 		SetKeymapOpts::builder().callback(cb).build()
 	}
 
+	/// Launch a new instance of the ['explorer'](Explorer) in the current window.
+	pub fn open_current(_: ()) {
+		Self::open(OpenIn::CurrentWin).ok();
+	}
+
+	/// Launch a new instance of the [`explorer`](Explorer).
 	fn open(open: OpenIn) -> Result<()> {
-		let buf = api::create_buf(true, true)?;
+		let mut buf = api::create_buf(true, true)?;
 		let dir = std::env::current_dir()?;
 		let dir = Arc::new(dir);
 
@@ -139,11 +138,12 @@ impl Explorer {
 			OpenIn::CurrentWin => api::get_current_win(),
 		};
 
+		buf.set_name("FilesNvim")?;
 		win.set_buf(&buf)?;
 
 		OPEN_EXPS.insert(buf.clone(), exp.clone());
 
-		let mut exp = OPEN_EXPS.get_mut(&buf).ok_or(Error::NoExplorer(buf))?;
+		let mut exp = OPEN_EXPS.get_mut(&buf).ok_or_else(|| Error::NoExplorer(buf))?;
 
 		exp.setup_keymaps()?;
 		exp.list(dir)?;
