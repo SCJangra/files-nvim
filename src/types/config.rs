@@ -9,6 +9,9 @@ use nvim_oxi::{
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
+use crate::traits::LogErr;
+
+/// Global configuration of the plugin.
 static mut CONFIG: Lazy<Arc<Config>> = Lazy::new(|| Arc::new(Config {}));
 
 /// Configuration of this plugin.
@@ -17,8 +20,8 @@ pub struct Config {}
 
 impl Config {
 	/// Get an [`Arc`] to the global config.
-	pub fn arc_clone() -> Arc<Self> {
-		unsafe { CONFIG.clone() }
+	pub fn _arc_clone() -> Arc<Self> {
+		unsafe { Arc::clone(&*CONFIG) }
 	}
 
 	/// Clone the global config.
@@ -29,14 +32,12 @@ impl Config {
 	/// Get a global Neovim [`Object`] that represents the current configuration. This clones the
 	/// global config.
 	pub fn get_config(_: ()) -> Option<Object> {
-		// TODO: Return error somehow.
-		Self::clone().to_object().ok()
+		Self::clone().to_object().log_err().ok()
 	}
 
 	/// Replace the current configuration by the given [`Object`].
 	pub fn set_config(object: Object) {
-		// TODO: Return error somehow.
-		let Ok(config) = Self::from_object(object) else { return };
+		let Ok(config) = Self::from_object(object).log_err() else { return };
 		unsafe { *CONFIG = Arc::new(config) };
 	}
 }
