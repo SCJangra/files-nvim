@@ -11,6 +11,7 @@ mod error;
 mod impls;
 mod traits;
 mod types;
+mod utils;
 
 static CHANNEL: LazyLock<UnboundedSender<types::Task>> = LazyLock::new(|| {
 	let (s, r) = unbounded_channel();
