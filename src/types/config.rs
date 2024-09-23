@@ -1,20 +1,19 @@
 use std::sync::Arc;
 
 use nvim_oxi::{
-	conversion::{Error as ConversionError, FromObject, ToObject},
-	lua,
-	serde::{Deserializer, Serializer},
+	conversion::{FromObject, ToObject},
 	Object,
 };
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use crate::{traits::LogErr, ExplorerConfig, ExplorerKeymaps};
+use crate::{traits::LogErr, ExplorerConfig, ExplorerKeymaps, Icons};
 
 /// Global configuration of the plugin.
 static mut CONFIG: Lazy<Arc<Config>> = Lazy::new(|| {
 	Arc::new(Config {
 		explorer: ExplorerConfig { keymaps: ExplorerKeymaps { quit: String::from("q"), enter: String::from("<CR>") } },
+		icons: Icons { file_name: Default::default(), extension: Default::default() },
 	})
 });
 
@@ -22,6 +21,7 @@ static mut CONFIG: Lazy<Arc<Config>> = Lazy::new(|| {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Config {
 	pub explorer: ExplorerConfig,
+	pub icons: Icons,
 }
 
 impl Config {
@@ -48,29 +48,4 @@ impl Config {
 	}
 }
 
-impl FromObject for Config {
-	fn from_object(object: Object) -> Result<Self, ConversionError> {
-		Self::deserialize(Deserializer::new(object)).map_err(Into::into)
-	}
-}
-
-impl ToObject for Config {
-	fn to_object(self) -> Result<Object, ConversionError> {
-		self.serialize(Serializer::new()).map_err(Into::into)
-	}
-}
-
-impl lua::Poppable for Config {
-	unsafe fn pop(lstate: *mut lua::ffi::lua_State) -> Result<Self, lua::Error> {
-		let object = Object::pop(lstate)?;
-		Self::from_object(object).map_err(lua::Error::pop_error_from_err::<Self, _>)
-	}
-}
-
-impl lua::Pushable for Config {
-	unsafe fn push(self, lstate: *mut lua::ffi::lua_State) -> Result<std::ffi::c_int, lua::Error> {
-		self.to_object()
-			.map_err(lua::Error::push_error_from_err::<Self, _>)?
-			.push(lstate)
-	}
-}
+crate::lua_interop!(Config);
