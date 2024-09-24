@@ -110,11 +110,7 @@ impl Explorer {
 	}
 
 	fn map_enter(buf: Buffer) -> SetKeymapOpts {
-		let cb = move |_| {
-			let Ok(mut exp) = Self::get_mut(&buf) else { return };
-			exp.enter().ok();
-		};
-
+		let cb = move |_| Self::get_mut(&buf).and_then(|mut exp| exp.enter());
 		SetKeymapOpts::builder().callback(cb).build()
 	}
 
