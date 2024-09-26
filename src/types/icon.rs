@@ -12,6 +12,9 @@ pub struct Icon {
 pub struct Icons {
 	pub file_name: HashMap<String, Icon>,
 	pub extension: HashMap<String, Icon>,
+	pub default: Icon,
+	pub dir_empty: Icon,
+	pub dir_full: Icon,
 }
 
 crate::lua_interop!(Icon);

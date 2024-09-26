@@ -1,7 +1,7 @@
 use std::sync::LazyLock;
 
 use dashmap::DashMap;
-use nvim_oxi::{self as oxi, Dictionary, Function, Object};
+use nvim_oxi::{Dictionary, Function, Object};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 
 use traits::*;
@@ -22,7 +22,7 @@ static CHANNEL: LazyLock<UnboundedSender<types::Task>> = LazyLock::new(|| {
 static DIR_CACHE: LazyLock<DashMap<ArcPath, ArcFiles>> = LazyLock::new(DashMap::new);
 
 #[nvim_oxi::plugin]
-fn files_nvim() -> oxi::Result<Dictionary> {
+fn files_nvim() -> Result<Dictionary> {
 	Ok(Dictionary::from_iter([
 		("set_config", Object::from(Function::from_fn(Config::set_config))),
 		("get_config", Object::from(Function::from_fn(Config::get_config))),

@@ -26,6 +26,7 @@ static OPEN_EXPS: LazyLock<DashMap<Buffer, Explorer>> = LazyLock::new(DashMap::n
 #[derive(Clone)]
 pub struct Explorer {
 	buf: Buffer,
+	ns: u32,
 	dir: ArcPath,
 	files: ArcFiles,
 }
@@ -36,6 +37,15 @@ pub enum OpenIn {
 }
 
 impl Explorer {
+	/// Name of the explorer buffer.
+	pub const NAME: &str = "FilesNvim";
+
+	/// Namespace used for highlights and extmarks in the explorer.
+	pub const NS: &str = "FilesNvimExplorer";
+
+	/// Highlight group name for a directory icon.
+	pub const DIR_HIGHLIGHT: &str = "FilesNvimDirectoryIcon";
+
 	/// Setup key mappings for this explorer.
 	pub fn setup_keymaps(&mut self) -> Result<()> {
 		// NOTE: Key maps won't automatically refresh if the configuration is changed.
@@ -57,17 +67,27 @@ impl Explorer {
 		let mut buf = self.buf.clone();
 		let handler = AsyncHandle::new(move || {
 			let response = receiver.recv()??;
-			let lines = response
-				.files
-				.iter()
-				.map(|f| f.path.file_name().unwrap_or_default())
-				.map(|name| oxi::String::from_bytes(name.as_encoded_bytes()));
+
+			let config = Config::arc_clone();
+
+			let icons = response.files.iter().map(|f| config.icon(f));
+
+			let lines = response.files.iter().zip(icons.clone()).map(|(file, icon)| {
+				let name = file.path.file_name().and_then(|n| n.to_str()).unwrap_or_default();
+				// TODO: Directly build a Neovim String
+				format!("{:2} {}", icon.icon, name)
+			});
 
 			buf.set_lines(0.., true, lines)?;
 
 			let mut exp = Self::get_mut(&buf)?;
 			exp.dir = response.dir;
-			exp.files = response.files;
+			exp.files = Arc::clone(&response.files);
+
+			let mut buf = buf.clone();
+			for (index, icon) in icons.enumerate() {
+				buf.add_highlight(exp.ns, &icon.name, index, 0..1).ok();
+			}
 
 			Ok::<_, Error>(())
 		})?;
@@ -127,16 +147,17 @@ impl Explorer {
 	/// Launch a new instance of the explorer.
 	fn open(open: OpenIn) -> Result<()> {
 		let mut buf = api::create_buf(true, true)?;
+		let ns = api::create_namespace(Self::NS);
 		let dir = std::env::current_dir()?;
 		let dir = Arc::new(dir);
 
-		let exp = Explorer { buf: buf.clone(), dir: Arc::clone(&dir), files: Arc::new(Vec::new()) };
+		let exp = Explorer { buf: buf.clone(), dir: Arc::clone(&dir), files: Arc::new(Vec::new()), ns };
 
 		let mut win = match open {
 			OpenIn::CurrentWin => api::get_current_win(),
 		};
 
-		buf.set_name("FilesNvim")?;
+		buf.set_name(Self::NAME)?;
 		win.set_buf(&buf)?;
 
 		Self::insert(buf.clone(), exp);

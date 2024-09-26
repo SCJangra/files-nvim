@@ -7,13 +7,19 @@ use nvim_oxi::{
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use crate::{traits::LogErr, ExplorerConfig, ExplorerKeymaps, Icons};
+use crate::{traits::LogErr, Explorer, ExplorerConfig, ExplorerKeymaps, File, FileType, Icon, Icons};
 
 /// Global configuration of the plugin.
 static mut CONFIG: Lazy<Arc<Config>> = Lazy::new(|| {
 	Arc::new(Config {
 		explorer: ExplorerConfig { keymaps: ExplorerKeymaps { quit: String::from("q"), enter: String::from("<CR>") } },
-		icons: Icons { file_name: Default::default(), extension: Default::default() },
+		icons: Icons {
+			file_name: Default::default(),
+			extension: Default::default(),
+			default: Icon { name: String::from("DevIconDefault"), icon: '' },
+			dir_full: Icon { name: String::from(Explorer::DIR_HIGHLIGHT), icon: '' },
+			dir_empty: Icon { name: String::from(Explorer::DIR_HIGHLIGHT), icon: '' },
+		},
 	})
 });
 
@@ -45,6 +51,37 @@ impl Config {
 	pub fn set_config(object: Object) {
 		let Ok(config) = Self::from_object(object).log_error() else { return };
 		unsafe { *CONFIG = Arc::new(config) };
+	}
+
+	/// Returns the icon for a given file path.
+	pub fn icon(&self, file: &File) -> &Icon {
+		match file.ty {
+			// TODO: Return a directory icon.
+			FileType::Directory => return &self.icons.dir_full,
+			_ => { /* Continue below to minimize nesting */ },
+		};
+
+		let maybe_icon = file
+			.path
+			.extension()
+			.and_then(|e| e.to_str())
+			.and_then(|e| self.icons.extension.get(e));
+
+		if let Some(icon) = maybe_icon {
+			return icon;
+		}
+
+		let maybe_icon = file
+			.path
+			.file_name()
+			.and_then(|n| n.to_str())
+			.and_then(|n| self.icons.file_name.get(n));
+
+		if let Some(icon) = maybe_icon {
+			return icon;
+		}
+
+		&self.icons.default
 	}
 }
 
