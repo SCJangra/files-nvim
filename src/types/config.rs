@@ -57,7 +57,8 @@ impl Config {
 	pub fn icon(&self, file: &File) -> &Icon {
 		match file.ty {
 			// TODO: Return a directory icon.
-			FileType::Directory => return &self.icons.dir_full,
+			FileType::DirectoryEmpty => return &self.icons.dir_empty,
+			FileType::DirectoryFull => return &self.icons.dir_full,
 			_ => { /* Continue below to minimize nesting */ },
 		};
 

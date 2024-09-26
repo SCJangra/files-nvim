@@ -44,7 +44,12 @@ impl List {
 				let ty = if meta.is_file() {
 					FileType::File
 				} else if meta.is_dir() {
-					FileType::Directory
+					let child = tokio::fs::read_dir(&path).await?.next_entry().await?;
+
+					match child {
+						Some(_) => FileType::DirectoryFull,
+						None => FileType::DirectoryEmpty,
+					}
 				} else if meta.is_symlink() {
 					FileType::Symlink
 				} else {

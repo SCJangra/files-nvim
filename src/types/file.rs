@@ -10,7 +10,8 @@ pub struct File {
 #[derive(Debug)]
 pub enum FileType {
 	File,
-	Directory,
+	DirectoryEmpty,
+	DirectoryFull,
 	Symlink,
 	Unknown,
 }
