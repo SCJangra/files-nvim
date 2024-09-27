@@ -12,7 +12,14 @@ use crate::{traits::LogErr, Explorer, ExplorerConfig, ExplorerKeymaps, File, Fil
 /// Global configuration of the plugin.
 static mut CONFIG: Lazy<Arc<Config>> = Lazy::new(|| {
 	Arc::new(Config {
-		explorer: ExplorerConfig { keymaps: ExplorerKeymaps { quit: String::from("q"), enter: String::from("<CR>") } },
+		explorer: ExplorerConfig {
+			keymaps: ExplorerKeymaps {
+				quit: String::from("q"),
+				enter: String::from("<CR>"),
+				next: String::from("l"),
+				prev: String::from("h"),
+			},
+		},
 		icons: Icons {
 			file_name: Default::default(),
 			extension: Default::default(),

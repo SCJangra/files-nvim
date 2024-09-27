@@ -9,6 +9,8 @@ pub struct ExplorerConfig {
 pub struct ExplorerKeymaps {
 	pub quit: String,
 	pub enter: String,
+	pub next: String,
+	pub prev: String,
 }
 
 crate::lua_interop!(ExplorerConfig);

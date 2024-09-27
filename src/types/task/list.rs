@@ -5,10 +5,8 @@ use tokio_stream::{wrappers::ReadDirStream, StreamExt};
 use crate::{traits, types::*, DIR_CACHE};
 
 /// List the files of a directory.
-#[derive(derive_more::Debug)]
 pub struct List {
 	dir: ArcPath,
-	#[debug(skip)]
 	handler: AsyncHandle,
 	sender: Sender<ListResult>,
 }

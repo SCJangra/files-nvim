@@ -1,6 +1,6 @@
 use nvim_oxi::{self as oxi, api::Buffer};
 
-use crate::{types::Task, LogErr};
+use crate::{types::Task, ArcPath, LogErr};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -21,6 +21,9 @@ pub enum Error {
 
 	#[error("NoFile({0})")]
 	NoFile(usize),
+
+	#[error("NoFiles({0})")]
+	NoFiles(ArcPath),
 }
 
 impl From<oxi::api::Error> for Error {
