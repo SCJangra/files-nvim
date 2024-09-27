@@ -93,8 +93,7 @@ impl Explorer {
 		let lines = response.files.iter().zip(icons.clone()).map(|(file, icon)| {
 			let name = file.path.file_name().and_then(|n| n.to_str()).unwrap_or_default();
 			// TODO: Directly build a Neovim String
-			let str = format!("{:2} {}", icon.icon, name);
-			nvim_oxi::String::from_bytes(str.as_bytes())
+			format!("{:2} {}", icon.icon, name)
 		});
 
 		buf.set_lines(0.., true, lines)?;
@@ -112,6 +111,7 @@ impl Explorer {
 			exp.ns
 		};
 
+		buf.clear_namespace(ns, 0..)?;
 		for (index, icon) in icons.enumerate() {
 			buf.add_highlight(ns, &icon.name, index, 0..1).ok();
 		}
