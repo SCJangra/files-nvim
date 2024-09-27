@@ -1,7 +1,7 @@
-use crate::types::ArcPath;
+use std::path::PathBuf;
 
 pub struct Navigator {
-	dirs: Vec<ArcPath>,
+	dirs: Vec<PathBuf>,
 	index: usize,
 	max_index: usize,
 }
@@ -14,12 +14,12 @@ pub enum Nav {
 }
 
 impl Navigator {
-	pub fn new(current_dir: ArcPath) -> Self {
+	pub fn new(current_dir: PathBuf) -> Self {
 		Self { dirs: vec![current_dir], index: 0, max_index: 0 }
 	}
 
 	/// Get the previous directory.
-	pub fn next(&self) -> Option<&ArcPath> {
+	pub fn next(&self) -> Option<&PathBuf> {
 		let new_index = self.index.checked_add(1)?;
 
 		if new_index > self.max_index {
@@ -30,7 +30,7 @@ impl Navigator {
 	}
 
 	/// Get the next directory.
-	pub fn prev(&self) -> Option<&ArcPath> {
+	pub fn prev(&self) -> Option<&PathBuf> {
 		let new_index = self.index.checked_sub(1)?;
 		self.dirs.get(new_index)
 	}
@@ -51,13 +51,8 @@ impl Navigator {
 		self.index = self.index.saturating_sub(1);
 	}
 
-	/// Get the current directory.
-	pub fn current(&self) -> &ArcPath {
-		&self.dirs[self.index]
-	}
-
 	/// Insert a new directory.
-	pub fn insert(&mut self, dir: ArcPath) {
+	pub fn insert(&mut self, dir: PathBuf) {
 		self.index = self.index.saturating_add(1);
 		self.max_index = self.index;
 

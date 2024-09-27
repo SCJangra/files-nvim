@@ -1,13 +1,13 @@
-use std::{path::PathBuf, sync::Arc};
+use std::path::PathBuf;
 
 /// A file.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct File {
-	pub path: ArcPath,
+	pub path: PathBuf,
 	pub ty: FileType,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum FileType {
 	File,
 	DirectoryEmpty,
@@ -15,9 +15,3 @@ pub enum FileType {
 	Symlink,
 	Unknown,
 }
-
-/// Reference to a vector of files.
-pub type ArcFiles = Arc<Vec<File>>;
-
-/// Path to a file.
-pub type ArcPath = Arc<PathBuf>;

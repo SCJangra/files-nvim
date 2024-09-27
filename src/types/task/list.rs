@@ -1,36 +1,32 @@
 use nvim_oxi::libuv::AsyncHandle;
-use std::sync::{mpsc::Sender, Arc};
+use std::{path::PathBuf, sync::mpsc::Sender};
 use tokio_stream::{wrappers::ReadDirStream, StreamExt};
 
-use crate::{traits, types::*, DIR_CACHE};
+use crate::{traits, types::*};
 
 /// List the files of a directory.
 pub struct List {
-	dir: ArcPath,
+	dir: PathBuf,
 	handler: AsyncHandle,
 	sender: Sender<ListResult>,
 }
 
 /// Successful response of a [`List`] command.
 pub struct ListResponse {
-	pub dir: ArcPath,
-	pub files: ArcFiles,
+	pub dir: PathBuf,
+	pub files: Vec<File>,
 }
 
 /// Value returned from a list task.
 pub type ListResult = Result<ListResponse>;
 
 impl List {
-	pub fn new(dir: ArcPath, handler: AsyncHandle, sender: Sender<ListResult>) -> Self {
+	pub fn new(dir: PathBuf, handler: AsyncHandle, sender: Sender<ListResult>) -> Self {
 		Self { dir, handler, sender }
 	}
 
-	async fn list(dir: ArcPath) -> ListResult {
-		if let Some(files) = DIR_CACHE.get(&dir) {
-			return Ok(ListResponse { dir: Arc::clone(&dir), files: Arc::clone(&files) });
-		}
-
-		let read_dir = tokio::fs::read_dir(dir.as_ref()).await?;
+	async fn list(dir: PathBuf) -> ListResult {
+		let read_dir = tokio::fs::read_dir(&dir).await?;
 		let files = ReadDirStream::new(read_dir);
 
 		let files = files
@@ -54,15 +50,11 @@ impl List {
 					FileType::Unknown
 				};
 
-				Ok::<_, tokio::io::Error>(File { path: ArcPath::new(path), ty })
+				Ok::<_, tokio::io::Error>(File { path, ty })
 			})
 			.filter_map(|res| res.ok())
 			.collect::<Vec<_>>()
 			.await;
-
-		let files = Arc::new(files);
-
-		DIR_CACHE.insert(Arc::clone(&dir), Arc::clone(&files));
 
 		Ok(ListResponse { dir, files })
 	}

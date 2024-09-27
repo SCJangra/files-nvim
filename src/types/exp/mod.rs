@@ -5,7 +5,10 @@ pub use config::*;
 
 use nav::*;
 
-use std::sync::{mpsc, Arc, LazyLock};
+use std::{
+	path::PathBuf,
+	sync::{mpsc, LazyLock},
+};
 
 use dashmap::{mapref::one::RefMut, DashMap};
 use nvim_oxi::{
@@ -19,7 +22,7 @@ use nvim_oxi::{
 	libuv::AsyncHandle,
 };
 
-use crate::{error::*, types::*, CHANNEL, DIR_CACHE};
+use crate::{error::*, types::*, CHANNEL};
 
 /// A map from [`Buffer`] to [`Explorer`] for all active explorers.
 static OPEN_EXPS: LazyLock<DashMap<Buffer, Explorer>> = LazyLock::new(DashMap::new);
@@ -29,6 +32,7 @@ static OPEN_EXPS: LazyLock<DashMap<Buffer, Explorer>> = LazyLock::new(DashMap::n
 pub struct Explorer {
 	buf: Buffer,
 	ns: u32,
+	files: Vec<File>,
 	nav: Navigator,
 }
 
@@ -64,7 +68,7 @@ impl Explorer {
 	}
 
 	/// List the files of `dir` in the explorer.
-	fn list(&mut self, dir: ArcPath, nav: Nav) -> Result<()> {
+	fn list(&mut self, dir: PathBuf, nav: Nav) -> Result<()> {
 		let (sender, receiver) = mpsc::channel::<ListResult>();
 
 		let buf = self.buf.clone();
@@ -98,22 +102,20 @@ impl Explorer {
 
 		buf.set_lines(0.., true, lines)?;
 
-		let ns = {
-			let mut exp = Self::get_mut(&buf)?;
-
-			match nav {
-				Nav::Next => exp.nav.go_to_next(),
-				Nav::Prev => exp.nav.go_to_prev(),
-				Nav::New => exp.nav.insert(response.dir),
-				Nav::Noop => (),
-			}
-
-			exp.ns
-		};
-
+		let ns = api::create_namespace(Self::NS);
 		buf.clear_namespace(ns, 0..)?;
 		for (index, icon) in icons.enumerate() {
 			buf.add_highlight(ns, &icon.name, index, 0..1).ok();
+		}
+
+		let mut exp = Self::get_mut(&buf)?;
+		exp.files = response.files;
+
+		match nav {
+			Nav::Next => exp.nav.go_to_next(),
+			Nav::Prev => exp.nav.go_to_prev(),
+			Nav::New => exp.nav.insert(response.dir),
+			Nav::Noop => (),
 		}
 
 		Ok(())
@@ -130,11 +132,10 @@ impl Explorer {
 
 		// 0 is row, and row is 1-indexed
 		let index = win.get_cursor()?.0.saturating_sub(1);
-		let files = self.files()?;
-		let file = files.get(index).ok_or_else(|| Error::NoFile(index))?;
+		let file = self.files.get(index).ok_or_else(|| Error::NoFile(index))?;
 
 		match file.ty {
-			FileType::DirectoryEmpty | FileType::DirectoryFull => self.list(Arc::clone(&file.path), Nav::New)?,
+			FileType::DirectoryEmpty | FileType::DirectoryFull => self.list(file.path.clone(), Nav::New)?,
 			// TODO: Open files
 			// TODO: Follow symbolic links
 			_ => oxi::print!("Unsupported operation"),
@@ -146,14 +147,14 @@ impl Explorer {
 	/// Go to the next directory.
 	fn next(&mut self) -> Result<()> {
 		let Some(dir) = self.nav.next() else { return Ok(()) };
-		self.list(Arc::clone(dir), Nav::Next)?;
+		self.list(dir.clone(), Nav::Next)?;
 		Ok(())
 	}
 
 	/// Go to the previous file.
 	fn prev(&mut self) -> Result<()> {
 		let Some(dir) = self.nav.prev() else { return Ok(()) };
-		self.list(Arc::clone(dir), Nav::Prev)?;
+		self.list(dir.clone(), Nav::Prev)?;
 		Ok(())
 	}
 
@@ -194,9 +195,8 @@ impl Explorer {
 		let mut buf = api::create_buf(true, true)?;
 		let ns = api::create_namespace(Self::NS);
 		let dir = std::env::current_dir()?;
-		let dir = Arc::new(dir);
 
-		let exp = Explorer { buf: buf.clone(), ns, nav: Navigator::new(Arc::clone(&dir)) };
+		let exp = Explorer { buf: buf.clone(), ns, files: Vec::new(), nav: Navigator::new(dir.clone()) };
 
 		let mut win = match open {
 			OpenIn::CurrentWin => api::get_current_win(),
@@ -210,7 +210,7 @@ impl Explorer {
 		let mut exp = Self::get_mut(&buf)?;
 
 		exp.setup_keymaps()?;
-		exp.list(Arc::clone(&dir), Nav::Noop)?;
+		exp.list(dir, Nav::Noop)?;
 
 		Ok(())
 	}
@@ -231,16 +231,5 @@ impl Explorer {
 	#[inline(always)]
 	fn insert(buf: Buffer, exp: Self) {
 		OPEN_EXPS.insert(buf, exp);
-	}
-
-	/// Get current files of the explorer.
-	fn files(&self) -> Result<ArcFiles> {
-		let dir = self.nav.current();
-
-		DIR_CACHE
-			.try_get(self.nav.current())
-			.try_unwrap()
-			.map(|files| Arc::clone(&files))
-			.ok_or_else(|| Error::NoFiles(Arc::clone(dir)))
 	}
 }
