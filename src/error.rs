@@ -1,17 +1,19 @@
+use std::io;
+
 use nvim_oxi::{self as nvim, api::Buffer};
 
-use crate::{types::Task, LogErr};
+use crate::{types::List, LogErr};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
 	#[error("Io({0})")]
-	Io(#[from] tokio::io::Error),
+	Io(#[from] io::Error),
 
 	#[error("Nvim({0})")]
 	Nvim(#[from] nvim::Error),
 
-	#[error("SendTask({0:?})")]
-	SendTask(#[from] tokio::sync::mpsc::error::SendError<Task>),
+	#[error("SendList({0:?})")]
+	SendList(crossbeam_channel::SendError<List>),
 
 	#[error("RecvError({0})")]
 	RecvResult(#[from] std::sync::mpsc::RecvError),
@@ -21,6 +23,9 @@ pub enum Error {
 
 	#[error("NoFile({0})")]
 	NoFile(usize),
+
+	#[error("Cancelled")]
+	Cancelled,
 }
 
 impl From<nvim::api::Error> for Error {

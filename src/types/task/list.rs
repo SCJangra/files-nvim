@@ -1,8 +1,14 @@
-use nvim_oxi::libuv::AsyncHandle;
-use std::{path::PathBuf, sync::mpsc::Sender};
-use tokio_stream::{wrappers::ReadDirStream, StreamExt};
+use std::{
+	fs, io,
+	sync::atomic::{self, AtomicBool},
+};
 
-use crate::{traits, types::*};
+use crossbeam_channel::Receiver;
+use nvim_oxi::libuv::AsyncHandle;
+use rayon::iter::{ParallelBridge, ParallelIterator};
+use std::{path::PathBuf, sync::mpsc::Sender};
+
+use crate::{error::Error, types::*};
 
 /// List the files of a directory.
 pub struct List {
@@ -13,7 +19,6 @@ pub struct List {
 
 /// Successful response of a [`List`] command.
 pub struct ListResponse {
-	pub dir: PathBuf,
 	pub files: Vec<File>,
 }
 
@@ -25,20 +30,39 @@ impl List {
 		Self { dir, handler, sender }
 	}
 
-	async fn list(dir: PathBuf) -> ListResult {
-		let read_dir = tokio::fs::read_dir(&dir).await?;
-		let files = ReadDirStream::new(read_dir);
+	pub fn exec(self, r: &Receiver<Self>) {
+		let res = match Self::do_list(self.dir, r) {
+			Err(Error::Cancelled) => return,
+			res => res,
+		};
 
-		let files = files
-			.filter_map(|r| r.ok())
-			.then(|d| async move {
+		self.sender.send(res).ok();
+		self.handler.send().ok();
+	}
+
+	fn do_list(dir: PathBuf, r: &Receiver<Self>) -> ListResult {
+		let read_dir = fs::read_dir(&dir)?;
+
+		let cancelled = AtomicBool::new(false);
+
+		let files = read_dir
+			.par_bridge()
+			.take_any_while(|_| match r.is_empty() {
+				true => true,
+				false => {
+					cancelled.store(true, atomic::Ordering::Release);
+					false
+				},
+			})
+			.filter_map(|d| d.ok())
+			.map(|d| {
 				let path = d.path();
-				let meta = tokio::fs::metadata(&path).await?;
+				let meta = fs::metadata(&path)?;
 
 				let ty = if meta.is_file() {
 					FileType::File
 				} else if meta.is_dir() {
-					let child = tokio::fs::read_dir(&path).await?.next_entry().await?;
+					let child = fs::read_dir(&path)?.next();
 
 					match child {
 						Some(_) => FileType::DirectoryFull,
@@ -50,21 +74,14 @@ impl List {
 					FileType::Unknown
 				};
 
-				Ok::<_, tokio::io::Error>(File { path, ty })
+				Ok::<_, io::Error>(File { path, ty })
 			})
 			.filter_map(|res| res.ok())
-			.collect::<Vec<_>>()
-			.await;
+			.collect::<Vec<_>>();
 
-		Ok(ListResponse { dir, files })
-	}
-}
-
-impl traits::Task for List {
-	type Result = Vec<File>;
-
-	async fn execute(self) {
-		self.sender.send(Self::list(self.dir).await).ok();
-		self.handler.send().ok();
+		match cancelled.load(atomic::Ordering::Acquire) {
+			true => Err(Error::Cancelled),
+			false => Ok(ListResponse { files }),
+		}
 	}
 }

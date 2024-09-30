@@ -25,7 +25,7 @@ use nvim_oxi::{
 	libuv::AsyncHandle,
 };
 
-use crate::{error::*, types::*, CHANNEL};
+use crate::{error::*, types::*, LIST};
 
 /// A map from [`Buffer`] to [`Explorer`] for all active explorers.
 static OPEN_EXPS: LazyLock<DashMap<Buffer, Explorer>> = LazyLock::new(DashMap::new);
@@ -71,6 +71,13 @@ impl Explorer {
 
 	/// List the files of `dir` in the explorer.
 	fn list(&mut self, dir: PathBuf, nav: Nav) -> Result<()> {
+		match nav {
+			Nav::Next => self.nav.go_to_next(),
+			Nav::Prev => self.nav.go_to_prev(),
+			Nav::New => self.nav.insert(dir.clone()),
+			Nav::Noop => (),
+		}
+
 		let (sender, receiver) = mpsc::channel::<ListResult>();
 
 		let buf = self.buf;
@@ -83,14 +90,13 @@ impl Explorer {
 
 			Result::Ok(())
 		})?;
-		let list = Task::List(List::new(dir, handler, sender));
 
-		CHANNEL.send(list)?;
+		LIST.send(List::new(dir, handler, sender)).map_err(Error::SendList)?;
 
 		Ok(())
 	}
 
-	fn do_list(response: ListResponse, buf: Buffer, nav: Nav) -> Result<()> {
+	fn do_list(response: ListResponse, buf: Buffer, _nav: Nav) -> Result<()> {
 		let config = Config::arc_clone();
 
 		let icons = response.files.iter().map(|f| config.icon(f));
@@ -110,13 +116,6 @@ impl Explorer {
 
 		let mut exp = Self::get_mut(&buf)?;
 		exp.files = response.files;
-
-		match nav {
-			Nav::Next => exp.nav.go_to_next(),
-			Nav::Prev => exp.nav.go_to_prev(),
-			Nav::New => exp.nav.insert(response.dir),
-			Nav::Noop => (),
-		}
 
 		Ok(())
 	}

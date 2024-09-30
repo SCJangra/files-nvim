@@ -1,7 +1,7 @@
 use std::sync::LazyLock;
 
+use crossbeam_channel::{unbounded, Receiver, Sender};
 use nvim_oxi::{Dictionary, Function, Object};
-use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 
 use traits::*;
 use types::*;
@@ -12,9 +12,9 @@ mod traits;
 mod types;
 mod utils;
 
-static CHANNEL: LazyLock<UnboundedSender<types::Task>> = LazyLock::new(|| {
-	let (s, r) = unbounded_channel();
-	std::thread::spawn(|| start(r));
+static LIST: LazyLock<Sender<List>> = LazyLock::new(|| {
+	let (s, r) = unbounded();
+	std::thread::spawn(|| list(r));
 	s
 });
 
@@ -33,11 +33,8 @@ fn files_nvim() -> Result<Dictionary> {
 	]))
 }
 
-#[tokio::main]
-async fn start(mut channel: UnboundedReceiver<types::Task>) {
-	while let Some(task) = channel.recv().await {
-		match task {
-			types::Task::List(list) => list.execute().await,
-		}
+fn list(r: Receiver<List>) {
+	while let Ok(l) = r.recv() {
+		l.exec(&r);
 	}
 }
