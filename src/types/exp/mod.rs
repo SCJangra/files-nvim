@@ -10,7 +10,10 @@ use std::{
 	sync::{mpsc, LazyLock},
 };
 
-use dashmap::{mapref::one::RefMut, DashMap};
+use dashmap::{
+	mapref::one::{Ref, RefMut},
+	DashMap,
+};
 use nvim_oxi::{
 	self as oxi,
 	api::{
@@ -56,13 +59,12 @@ impl Explorer {
 		// NOTE: Key maps won't automatically refresh if the configuration is changed.
 		let maps = &Config::arc_clone().explorer.keymaps;
 
-		let buf = self.buf.clone();
 		let mode = Mode::Normal;
 
-		self.buf.set_keymap(mode, &maps.quit, "", &Self::map_quit(buf.clone()))?;
-		self.buf.set_keymap(mode, &maps.enter, "", &Self::map_enter(buf.clone()))?;
-		self.buf.set_keymap(mode, &maps.next, "", &Self::map_next(buf.clone()))?;
-		self.buf.set_keymap(mode, &maps.prev, "", &Self::map_prev(buf.clone()))?;
+		self.buf.set_keymap(mode, &maps.quit, "", &Self::map_quit(self.buf))?;
+		self.buf.set_keymap(mode, &maps.enter, "", &Self::map_enter(self.buf))?;
+		self.buf.set_keymap(mode, &maps.next, "", &Self::map_next(self.buf))?;
+		self.buf.set_keymap(mode, &maps.prev, "", &Self::map_prev(self.buf))?;
 
 		Ok(())
 	}
@@ -71,11 +73,10 @@ impl Explorer {
 	fn list(&mut self, dir: PathBuf, nav: Nav) -> Result<()> {
 		let (sender, receiver) = mpsc::channel::<ListResult>();
 
-		let buf = self.buf.clone();
+		let buf = self.buf;
 		let handler = AsyncHandle::new(move || {
 			let response = receiver.recv()??;
 
-			let buf = buf.clone();
 			let nav = nav.clone();
 
 			nvim_oxi::schedule(move |_| Self::do_list(response, buf, nav).unwrap_or_default());
@@ -89,7 +90,7 @@ impl Explorer {
 		Ok(())
 	}
 
-	fn do_list(response: ListResponse, mut buf: Buffer, nav: Nav) -> Result<()> {
+	fn do_list(response: ListResponse, buf: Buffer, nav: Nav) -> Result<()> {
 		let config = Config::arc_clone();
 
 		let icons = response.files.iter().map(|f| config.icon(f));
@@ -102,7 +103,7 @@ impl Explorer {
 
 		buf.set_lines(0.., true, lines)?;
 
-		let ns = api::create_namespace(Self::NS);
+		let ns = { Self::get(&buf)?.ns };
 		buf.clear_namespace(ns, 0..)?;
 		for (index, icon) in icons.enumerate() {
 			buf.add_highlight(ns, &icon.name, index, 0..1).ok();
@@ -192,11 +193,11 @@ impl Explorer {
 
 	/// Launch a new instance of the explorer.
 	fn open(open: OpenIn) -> Result<()> {
-		let mut buf = api::create_buf(true, true)?;
+		let buf = api::create_buf(true, true)?;
 		let ns = api::create_namespace(Self::NS);
 		let dir = std::env::current_dir()?;
 
-		let exp = Explorer { buf: buf.clone(), ns, files: Vec::new(), nav: Navigator::new(dir.clone()) };
+		let exp = Explorer { buf, ns, files: Vec::new(), nav: Navigator::new(dir.clone()) };
 
 		let mut win = match open {
 			OpenIn::CurrentWin => api::get_current_win(),
@@ -205,7 +206,7 @@ impl Explorer {
 		buf.set_option("filetype", Self::NAME)?;
 		win.set_buf(&buf)?;
 
-		Self::insert(buf.clone(), exp);
+		Self::insert(buf, exp);
 
 		let mut exp = Self::get_mut(&buf)?;
 
@@ -217,15 +218,17 @@ impl Explorer {
 
 	#[inline(always)]
 	fn get_mut(buf: &Buffer) -> Result<RefMut<'_, Buffer, Self>> {
-		OPEN_EXPS.get_mut(buf).ok_or_else(|| Error::NoExplorer(buf.clone()))
+		OPEN_EXPS.get_mut(buf).ok_or_else(|| Error::NoExplorer(*buf))
+	}
+
+	#[inline(always)]
+	fn get(buf: &Buffer) -> Result<Ref<'_, Buffer, Self>> {
+		OPEN_EXPS.try_get(buf).try_unwrap().ok_or_else(|| Error::NoExplorer(*buf))
 	}
 
 	#[inline(always)]
 	fn remove(buf: &Buffer) -> Result<Self> {
-		OPEN_EXPS
-			.remove(buf)
-			.ok_or_else(|| Error::NoExplorer(buf.clone()))
-			.map(|(_, exp)| exp)
+		OPEN_EXPS.remove(buf).ok_or_else(|| Error::NoExplorer(*buf)).map(|(_, exp)| exp)
 	}
 
 	#[inline(always)]
