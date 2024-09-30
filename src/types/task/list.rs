@@ -6,9 +6,13 @@ use std::{
 use crossbeam_channel::Receiver;
 use nvim_oxi::libuv::AsyncHandle;
 use rayon::iter::{ParallelBridge, ParallelIterator};
+use rayon::slice::ParallelSliceMut;
 use std::{path::PathBuf, sync::mpsc::Sender};
 
-use crate::{error::Error, types::*};
+use crate::{
+	error::Error,
+	types::{File, FileType, Result},
+};
 
 /// List the files of a directory.
 pub struct List {
@@ -31,12 +35,7 @@ impl List {
 	}
 
 	pub fn exec(self, r: &Receiver<Self>) {
-		let res = match Self::do_list(self.dir, r) {
-			Err(Error::Cancelled) => return,
-			res => res,
-		};
-
-		self.sender.send(res).ok();
+		self.sender.send(Self::do_list(self.dir, r)).ok();
 		self.handler.send().ok();
 	}
 
@@ -45,7 +44,7 @@ impl List {
 
 		let cancelled = AtomicBool::new(false);
 
-		let files = read_dir
+		let (mut dirs, mut files): (Vec<_>, Vec<_>) = read_dir
 			.par_bridge()
 			.take_any_while(|_| match r.is_empty() {
 				true => true,
@@ -77,11 +76,20 @@ impl List {
 				Ok::<_, io::Error>(File { path, ty })
 			})
 			.filter_map(|res| res.ok())
-			.collect::<Vec<_>>();
+			.partition(|f| matches!(f.ty, FileType::DirectoryFull | FileType::DirectoryEmpty));
+
+		rayon::join(
+			|| dirs.par_sort_by(|a, b| a.path.file_name().cmp(&b.path.file_name())),
+			|| files.par_sort_by(|a, b| a.path.file_name().cmp(&b.path.file_name())),
+		);
+
+		let mut all = Vec::with_capacity(dirs.len() + files.len());
+		all.extend_from_slice(&dirs);
+		all.extend_from_slice(&files);
 
 		match cancelled.load(atomic::Ordering::Acquire) {
 			true => Err(Error::Cancelled),
-			false => Ok(ListResponse { files }),
+			false => Ok(ListResponse { files: all }),
 		}
 	}
 }

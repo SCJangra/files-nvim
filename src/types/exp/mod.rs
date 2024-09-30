@@ -82,7 +82,11 @@ impl Explorer {
 
 		let buf = self.buf;
 		let handler = AsyncHandle::new(move || {
-			let response = receiver.recv()??;
+			let response = match receiver.recv()? {
+				// Returning ok here because we don't want to log this error.
+				Err(Error::Cancelled) => return Ok(()),
+				res => res?,
+			};
 
 			let nav = nav.clone();
 
