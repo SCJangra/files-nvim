@@ -1,11 +1,11 @@
 use crate::{error::Error, traits::LogErr};
 
-use nvim_oxi::{api::Error as ApiError, conversion::Error as ConversionError};
+use nvim_oxi::{self as nvim, api::Error as ApiError, conversion::Error as ConversionError};
 
 impl<T> LogErr for Result<T, ConversionError> {
 	fn log_err(&self) {
 		if let Err(ref err) = self {
-			nvim_oxi::print!("Error: {err}");
+			nvim::print!("Error: {err}");
 		}
 	}
 
@@ -18,7 +18,7 @@ impl<T> LogErr for Result<T, ConversionError> {
 impl<T> LogErr for Result<T, ApiError> {
 	fn log_err(&self) {
 		if let Err(ref err) = self {
-			nvim_oxi::print!("Error: {err}");
+			nvim::print!("Error: {err}");
 		}
 	}
 

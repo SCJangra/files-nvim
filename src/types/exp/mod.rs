@@ -15,7 +15,7 @@ use dashmap::{
 	DashMap,
 };
 use nvim_oxi::{
-	self as oxi,
+	self as nvim,
 	api::{
 		self,
 		opts::{BufDeleteOpts, SetKeymapOpts},
@@ -79,7 +79,7 @@ impl Explorer {
 
 			let nav = nav.clone();
 
-			nvim_oxi::schedule(move |_| Self::do_list(response, buf, nav).unwrap_or_default());
+			nvim::schedule(move |_| Self::do_list(response, buf, nav).unwrap_or_default());
 
 			Result::Ok(())
 		})?;
@@ -139,7 +139,7 @@ impl Explorer {
 			FileType::DirectoryEmpty | FileType::DirectoryFull => self.list(file.path.clone(), Nav::New)?,
 			// TODO: Open files
 			// TODO: Follow symbolic links
-			_ => oxi::print!("Unsupported operation"),
+			_ => nvim::print!("Unsupported operation"),
 		};
 
 		Ok(())
