@@ -97,8 +97,7 @@ impl Explorer {
 
 		let lines = response.files.iter().zip(icons.clone()).map(|(file, icon)| {
 			let name = file.path.file_name().and_then(|n| n.to_str()).unwrap_or_default();
-			// TODO: Directly build a Neovim String
-			format!("{:2} {}", icon.icon, name)
+			nvim::string!("{:2} {}", icon.icon, name)
 		});
 
 		buf.set_lines(0.., true, lines)?;
