@@ -18,6 +18,7 @@ static mut CONFIG: Lazy<Arc<Config>> = Lazy::new(|| {
 				enter: String::from("<CR>"),
 				next: String::from("l"),
 				prev: String::from("h"),
+				up: String::from("<A-h>"),
 			},
 		},
 		icons: Icons {

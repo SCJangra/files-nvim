@@ -65,6 +65,7 @@ impl Explorer {
 		self.buf.set_keymap(mode, &maps.enter, "", &Self::map_enter(self.buf))?;
 		self.buf.set_keymap(mode, &maps.next, "", &Self::map_next(self.buf))?;
 		self.buf.set_keymap(mode, &maps.prev, "", &Self::map_prev(self.buf))?;
+		self.buf.set_keymap(mode, &maps.up, "", &Self::map_up(self.buf))?;
 
 		Ok(())
 	}
@@ -74,6 +75,7 @@ impl Explorer {
 		match nav {
 			Nav::Next => self.nav.go_to_next(),
 			Nav::Prev => self.nav.go_to_prev(),
+			Nav::Up => self.nav.got_to_up(),
 			Nav::New => self.nav.insert(dir.clone()),
 			Nav::Noop => (),
 		}
@@ -87,8 +89,6 @@ impl Explorer {
 				Err(Error::Cancelled) => return Ok(()),
 				res => res?,
 			};
-
-			let nav = nav.clone();
 
 			nvim::schedule(move |_| Self::do_list(response, buf, nav).unwrap_or_default());
 
@@ -199,6 +199,11 @@ impl Explorer {
 		SetKeymapOpts::builder().callback(cb).build()
 	}
 
+	fn map_up(buf: Buffer) -> SetKeymapOpts {
+		let cb = move |_| Self::get_mut(&buf).and_then(|mut exp| exp.up());
+		SetKeymapOpts::builder().callback(cb).build()
+	}
+
 	fn map_quit(buf: Buffer) -> SetKeymapOpts {
 		let cb = move |_| Self::remove(&buf).and_then(|exp| exp.quit());
 		SetKeymapOpts::builder().callback(cb).build()
@@ -210,15 +215,18 @@ impl Explorer {
 	/// Go to the next directory.
 	fn next(&mut self) -> Result<()> {
 		let Some(dir) = self.nav.next() else { return Ok(()) };
-		self.list(dir.clone(), Nav::Next)?;
-		Ok(())
+		self.list(dir.to_path_buf(), Nav::Next)
 	}
 
 	/// Go to the previous file.
 	fn prev(&mut self) -> Result<()> {
 		let Some(dir) = self.nav.prev() else { return Ok(()) };
-		self.list(dir.clone(), Nav::Prev)?;
-		Ok(())
+		self.list(dir.to_path_buf(), Nav::Prev)
+	}
+
+	fn up(&mut self) -> Result<()> {
+		let Some(dir) = self.nav.up() else { return Ok(()) };
+		self.list(dir.to_path_buf(), Nav::Up)
 	}
 
 	/// Open the file or enter the directory under cursor.
