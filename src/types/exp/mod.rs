@@ -124,68 +124,11 @@ impl Explorer {
 		Ok(())
 	}
 
-	/// Open the file or enter the directory under cursor.
-	fn enter(&mut self) -> Result<()> {
-		let win = api::get_current_win();
-		let buf = win.get_buf()?;
-
-		if buf != self.buf {
-			return Ok(());
-		}
-
-		// 0 is row, and row is 1-indexed
-		let index = win.get_cursor()?.0.saturating_sub(1);
-		let file = self.files.get(index).ok_or_else(|| Error::NoFile(index))?;
-
-		match file.ty {
-			FileType::DirectoryEmpty | FileType::DirectoryFull => self.list(file.path.clone(), Nav::New)?,
-			// TODO: Open files
-			// TODO: Follow symbolic links
-			_ => nvim::print!("Unsupported operation"),
-		};
-
-		Ok(())
-	}
-
-	/// Go to the next directory.
-	fn next(&mut self) -> Result<()> {
-		let Some(dir) = self.nav.next() else { return Ok(()) };
-		self.list(dir.clone(), Nav::Next)?;
-		Ok(())
-	}
-
-	/// Go to the previous file.
-	fn prev(&mut self) -> Result<()> {
-		let Some(dir) = self.nav.prev() else { return Ok(()) };
-		self.list(dir.clone(), Nav::Prev)?;
-		Ok(())
-	}
-
 	/// Exit this explorer.
 	fn quit(self) -> Result<()> {
 		self.buf
 			.delete(&BufDeleteOpts::builder().force(true).build())
 			.map_err(Into::into)
-	}
-
-	fn map_enter(buf: Buffer) -> SetKeymapOpts {
-		let cb = move |_| Self::get_mut(&buf).and_then(|mut exp| exp.enter());
-		SetKeymapOpts::builder().callback(cb).build()
-	}
-
-	fn map_next(buf: Buffer) -> SetKeymapOpts {
-		let cb = move |_| Self::get_mut(&buf).and_then(|mut exp| exp.next());
-		SetKeymapOpts::builder().callback(cb).build()
-	}
-
-	fn map_prev(buf: Buffer) -> SetKeymapOpts {
-		let cb = move |_| Self::get_mut(&buf).and_then(|mut exp| exp.prev());
-		SetKeymapOpts::builder().callback(cb).build()
-	}
-
-	fn map_quit(buf: Buffer) -> SetKeymapOpts {
-		let cb = move |_| Self::remove(&buf).and_then(|exp| exp.quit());
-		SetKeymapOpts::builder().callback(cb).build()
 	}
 
 	/// Launch a new instance of the explorer in the current window.
@@ -236,5 +179,68 @@ impl Explorer {
 	#[inline(always)]
 	fn insert(buf: Buffer, exp: Self) {
 		OPEN_EXPS.insert(buf, exp);
+	}
+}
+
+// Maps
+impl Explorer {
+	fn map_enter(buf: Buffer) -> SetKeymapOpts {
+		let cb = move |_| Self::get_mut(&buf).and_then(|mut exp| exp.enter());
+		SetKeymapOpts::builder().callback(cb).build()
+	}
+
+	fn map_next(buf: Buffer) -> SetKeymapOpts {
+		let cb = move |_| Self::get_mut(&buf).and_then(|mut exp| exp.next());
+		SetKeymapOpts::builder().callback(cb).build()
+	}
+
+	fn map_prev(buf: Buffer) -> SetKeymapOpts {
+		let cb = move |_| Self::get_mut(&buf).and_then(|mut exp| exp.prev());
+		SetKeymapOpts::builder().callback(cb).build()
+	}
+
+	fn map_quit(buf: Buffer) -> SetKeymapOpts {
+		let cb = move |_| Self::remove(&buf).and_then(|exp| exp.quit());
+		SetKeymapOpts::builder().callback(cb).build()
+	}
+}
+
+// Navigation
+impl Explorer {
+	/// Go to the next directory.
+	fn next(&mut self) -> Result<()> {
+		let Some(dir) = self.nav.next() else { return Ok(()) };
+		self.list(dir.clone(), Nav::Next)?;
+		Ok(())
+	}
+
+	/// Go to the previous file.
+	fn prev(&mut self) -> Result<()> {
+		let Some(dir) = self.nav.prev() else { return Ok(()) };
+		self.list(dir.clone(), Nav::Prev)?;
+		Ok(())
+	}
+
+	/// Open the file or enter the directory under cursor.
+	fn enter(&mut self) -> Result<()> {
+		let win = api::get_current_win();
+		let buf = win.get_buf()?;
+
+		if buf != self.buf {
+			return Ok(());
+		}
+
+		// 0 is row, and row is 1-indexed
+		let index = win.get_cursor()?.0.saturating_sub(1);
+		let file = self.files.get(index).ok_or_else(|| Error::NoFile(index))?;
+
+		match file.ty {
+			FileType::DirectoryEmpty | FileType::DirectoryFull => self.list(file.path.clone(), Nav::New)?,
+			// TODO: Open files
+			// TODO: Follow symbolic links
+			_ => nvim::print!("Unsupported operation"),
+		};
+
+		Ok(())
 	}
 }
