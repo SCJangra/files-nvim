@@ -25,7 +25,7 @@ use nvim_oxi::{
 	libuv::AsyncHandle,
 };
 
-use crate::{error::*, types::*, LIST};
+use crate::{error::*, types::*, WithModifiable, LIST};
 
 /// A map from [`Buffer`] to [`Explorer`] for all active explorers.
 static OPEN_EXPS: LazyLock<DashMap<Buffer, Explorer>> = LazyLock::new(DashMap::new);
@@ -55,7 +55,7 @@ impl Explorer {
 	pub const DIR_HIGHLIGHT: &str = "FilesNvimDirectoryIcon";
 
 	/// Setup key mappings for this explorer.
-	pub fn setup_keymaps(&mut self) -> Result<()> {
+	pub fn setup_keymaps(&self) -> Result<()> {
 		// NOTE: Key maps won't automatically refresh if the configuration is changed.
 		let maps = &Config::arc_clone().explorer.keymaps;
 
@@ -67,6 +67,12 @@ impl Explorer {
 		self.buf.set_keymap(mode, &maps.prev, "", &Self::map_prev(self.buf))?;
 		self.buf.set_keymap(mode, &maps.up, "", &Self::map_up(self.buf))?;
 
+		Ok(())
+	}
+
+	/// Setup buffer options for this explorer.
+	pub fn setup_opts(&self) -> Result<()> {
+		self.buf.set_option("ma", false)?;
 		Ok(())
 	}
 
@@ -110,7 +116,7 @@ impl Explorer {
 			nvim::string!("{:2} {}", icon.icon, name)
 		});
 
-		buf.set_lines(0.., true, lines)?;
+		buf.with_modifiable(move || buf.set_lines(0.., true, lines).map_err(Into::into))?;
 
 		let ns = { Self::get(&buf)?.ns };
 		buf.clear_namespace(ns, 0..)?;
@@ -156,6 +162,7 @@ impl Explorer {
 		let mut exp = Self::get_mut(&buf)?;
 
 		exp.setup_keymaps()?;
+		exp.setup_opts()?;
 		exp.list(dir, Nav::Noop)?;
 
 		Ok(())
