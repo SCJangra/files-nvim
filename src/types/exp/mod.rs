@@ -113,7 +113,8 @@ impl Explorer {
 
 		let lines = response.files.iter().zip(icons.clone()).map(|(file, icon)| {
 			let name = file.path.file_name().and_then(|n| n.to_str()).unwrap_or_default();
-			nvim::string!("{:2} {}", icon.icon, name)
+			let (value, unit) = crate::utils::fun::bytes_to_size(file.size);
+			nvim::string!("{:2} {:40} {:>6} {}", icon.icon, name, (value * 100.0).round() / 100.0, unit)
 		});
 
 		buf.with_modifiable(move || buf.set_lines(0.., true, lines).map_err(Into::into))?;

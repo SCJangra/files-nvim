@@ -1,5 +1,6 @@
 use std::{
 	fs, io,
+	os::unix::fs::MetadataExt,
 	sync::atomic::{self, AtomicBool},
 };
 
@@ -73,7 +74,7 @@ impl List {
 					FileType::Unknown
 				};
 
-				Ok::<_, io::Error>(File { path, ty })
+				Ok::<_, io::Error>(File { path, ty, size: meta.size() })
 			})
 			.filter_map(|res| res.ok())
 			.partition(|f| matches!(f.ty, FileType::DirectoryFull | FileType::DirectoryEmpty));

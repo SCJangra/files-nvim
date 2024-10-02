@@ -5,6 +5,7 @@ use std::path::PathBuf;
 pub struct File {
 	pub path: PathBuf,
 	pub ty: FileType,
+	pub size: u64,
 }
 
 #[derive(Debug, Clone)]

@@ -112,7 +112,7 @@ dependencies = [
 [[package]]
 name = "nvim-oxi"
 version = "0.5.1"
-source = "git+https://github.com/SCJangra/nvim-oxi.git?branch=main#91375ad1550860268f5e09a62b1fff5931ca6f16"
+source = "git+https://github.com/SCJangra/nvim-oxi.git?branch=main#ea154d2c11f2b20acb765c8c2b67e809de6a0190"
 dependencies = [
  "nvim-oxi-api",
  "nvim-oxi-libuv",
@@ -125,7 +125,7 @@ dependencies = [
 [[package]]
 name = "nvim-oxi-api"
 version = "0.5.1"
-source = "git+https://github.com/SCJangra/nvim-oxi.git?branch=main#91375ad1550860268f5e09a62b1fff5931ca6f16"
+source = "git+https://github.com/SCJangra/nvim-oxi.git?branch=main#ea154d2c11f2b20acb765c8c2b67e809de6a0190"
 dependencies = [
  "nvim-oxi-luajit",
  "nvim-oxi-macros",
@@ -138,7 +138,7 @@ dependencies = [
 [[package]]
 name = "nvim-oxi-libuv"
 version = "0.5.1"
-source = "git+https://github.com/SCJangra/nvim-oxi.git?branch=main#91375ad1550860268f5e09a62b1fff5931ca6f16"
+source = "git+https://github.com/SCJangra/nvim-oxi.git?branch=main#ea154d2c11f2b20acb765c8c2b67e809de6a0190"
 dependencies = [
  "nvim-oxi-luajit",
  "thiserror",
@@ -147,7 +147,7 @@ dependencies = [
 [[package]]
 name = "nvim-oxi-luajit"
 version = "0.5.1"
-source = "git+https://github.com/SCJangra/nvim-oxi.git?branch=main#91375ad1550860268f5e09a62b1fff5931ca6f16"
+source = "git+https://github.com/SCJangra/nvim-oxi.git?branch=main#ea154d2c11f2b20acb765c8c2b67e809de6a0190"
 dependencies = [
  "thiserror",
 ]
@@ -155,7 +155,7 @@ dependencies = [
 [[package]]
 name = "nvim-oxi-macros"
 version = "0.5.1"
-source = "git+https://github.com/SCJangra/nvim-oxi.git?branch=main#91375ad1550860268f5e09a62b1fff5931ca6f16"
+source = "git+https://github.com/SCJangra/nvim-oxi.git?branch=main#ea154d2c11f2b20acb765c8c2b67e809de6a0190"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -165,7 +165,7 @@ dependencies = [
 [[package]]
 name = "nvim-oxi-types"
 version = "0.5.1"
-source = "git+https://github.com/SCJangra/nvim-oxi.git?branch=main#91375ad1550860268f5e09a62b1fff5931ca6f16"
+source = "git+https://github.com/SCJangra/nvim-oxi.git?branch=main#ea154d2c11f2b20acb765c8c2b67e809de6a0190"
 dependencies = [
  "libc",
  "nvim-oxi-luajit",
