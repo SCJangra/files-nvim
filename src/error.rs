@@ -1,4 +1,4 @@
-use std::io;
+use std::{fmt, io};
 
 use nvim_oxi::{self as nvim, api::Buffer};
 
@@ -26,6 +26,9 @@ pub enum Error {
 
 	#[error("Cancelled")]
 	Cancelled,
+
+	#[error("Fmt({0})")]
+	Fmt(#[from] fmt::Error),
 }
 
 impl From<nvim::api::Error> for Error {

@@ -7,7 +7,7 @@ use nvim_oxi::{
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use crate::{traits::LogErr, Explorer, ExplorerConfig, ExplorerKeymaps, File, FileType, Icon, Icons};
+use crate::{traits::LogErr, Explorer, ExplorerConfig, ExplorerKeymaps, Field, File, FileType, Icon, Icons};
 
 /// Global configuration of the plugin.
 static mut CONFIG: Lazy<Arc<Config>> = Lazy::new(|| {
@@ -20,6 +20,8 @@ static mut CONFIG: Lazy<Arc<Config>> = Lazy::new(|| {
 				prev: String::from("h"),
 				up: String::from("<A-h>"),
 			},
+			fields: vec![Field::Name, Field::Size],
+			name_width: 40,
 		},
 		icons: Icons {
 			file_name: Default::default(),

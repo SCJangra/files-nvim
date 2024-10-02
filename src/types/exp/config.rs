@@ -1,8 +1,12 @@
 use serde::{Deserialize, Serialize};
 
+use crate::types::Field;
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ExplorerConfig {
 	pub keymaps: ExplorerKeymaps,
+	pub fields: Vec<Field>,
+	pub name_width: usize,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
