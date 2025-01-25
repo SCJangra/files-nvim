@@ -20,7 +20,7 @@ macro_rules! lua_interop {
 		}
 
 		impl nvim_oxi::lua::Poppable for $type {
-			unsafe fn pop(lstate: *mut nvim_oxi::lua::ffi::lua_State) -> Result<Self, nvim_oxi::lua::Error> {
+			unsafe fn pop(lstate: *mut nvim_oxi::lua::ffi::State) -> Result<Self, nvim_oxi::lua::Error> {
 				use nvim_oxi::{conversion::FromObject, Object};
 
 				let object = Object::pop(lstate)?;
@@ -31,7 +31,7 @@ macro_rules! lua_interop {
 		impl nvim_oxi::lua::Pushable for $type {
 			unsafe fn push(
 				self,
-				lstate: *mut nvim_oxi::lua::ffi::lua_State,
+				lstate: *mut nvim_oxi::lua::ffi::State,
 			) -> Result<std::ffi::c_int, nvim_oxi::lua::Error> {
 				use nvim_oxi::conversion::ToObject;
 
