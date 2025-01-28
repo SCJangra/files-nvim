@@ -113,22 +113,21 @@ impl Explorer {
 		let lines = response.files.iter().map(|file| {
 			let mut b = nvim::StringBuilder::new();
 
+			let name = file.path.file_name().unwrap_or_default().to_str().unwrap_or_default();
+			let icon = config.icon(file);
+			let width = config.explorer.name_width;
+
+			let (name, dots) = match name.len() > width {
+				true => (&name[..width.saturating_sub(2)], ".."),
+				false => (name, ""),
+			};
+
+			b.write_fmt(format_args!("{:2} {name:1$}{dots}", icon.icon, width - dots.len()))
+				.map_err(Error::from)
+				.ok();
+
 			config.explorer.fields.iter().for_each(|field| {
 				match field {
-					Field::Name => {
-						let name = file.path.file_name().unwrap_or_default().to_str().unwrap_or_default();
-						let icon = config.icon(file);
-						let width = config.explorer.name_width;
-
-						let (name, dots) = match name.len() > width {
-							true => (&name[..width.saturating_sub(2)], ".."),
-							false => (name, ""),
-						};
-
-						b.write_fmt(format_args!("{:2} {name:1$}{dots}", icon.icon, width - dots.len()))
-							.map_err(Error::from)
-							.ok();
-					},
 					Field::Size => {
 						let (value, unit) = fun::bytes_to_size(file.size);
 						let val = (value * 100.0) / 100.0;
@@ -147,8 +146,6 @@ impl Explorer {
 		let ns = { Self::get(&buf)?.ns };
 		buf.clear_namespace(ns, 0..)?;
 		for (index, icon) in response.files.iter().map(|f| config.icon(f)).enumerate() {
-			// FIXME: Highlight the icons according to their position in the string, instead of just
-			//        highlighting the first character.
 			buf.add_highlight(ns, &icon.name, index, 0..1).ok();
 		}
 

@@ -20,7 +20,7 @@ static mut CONFIG: Lazy<Arc<Config>> = Lazy::new(|| {
 				prev: String::from("h"),
 				up: String::from("<A-h>"),
 			},
-			fields: vec![Field::Name, Field::Size],
+			fields: vec![Field::Size],
 			name_width: 40,
 		},
 		icons: Icons {
