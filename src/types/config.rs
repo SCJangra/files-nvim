@@ -22,6 +22,7 @@ static mut CONFIG: Lazy<Arc<Config>> = Lazy::new(|| {
 			},
 			fields: vec![Field::Size],
 			name_width: 40,
+			column_seperator: String::from(" "),
 		},
 		icons: Icons {
 			file_name: Default::default(),

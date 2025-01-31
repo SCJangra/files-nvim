@@ -127,6 +127,7 @@ impl Explorer {
 				.ok();
 
 			config.explorer.fields.iter().for_each(|field| {
+				b.write_str(&config.explorer.column_seperator).map_err(Error::from).ok();
 				match field {
 					Field::Size => {
 						let (value, unit) = fun::bytes_to_size(file.size);
@@ -135,7 +136,6 @@ impl Explorer {
 						b.write_fmt(format_args!("{val:>6.2} {unit}")).map_err(Error::from).ok();
 					},
 				}
-				b.write_char(' ').map_err(Error::from).ok();
 			});
 
 			b.finish()
@@ -173,22 +173,19 @@ impl Explorer {
 		let ns = api::create_namespace(Self::NS);
 		let dir = std::env::current_dir()?;
 
-		let exp = Explorer { buf, ns, files: Vec::new(), nav: Navigator::new(dir.clone()) };
-
 		let mut win = match open {
 			OpenIn::CurrentWin => api::get_current_win(),
 		};
 
-		buf.set_option("filetype", Self::NAME)?;
 		win.set_buf(&buf)?;
 
-		Self::insert(buf, exp);
-
-		let mut exp = Self::get_mut(&buf)?;
+		let mut exp = Explorer { buf, ns, files: Vec::new(), nav: Navigator::new(dir.clone()) };
 
 		exp.setup_keymaps()?;
 		exp.setup_opts()?;
 		exp.list(dir, Nav::Noop)?;
+
+		Self::insert(buf, exp);
 
 		Ok(())
 	}

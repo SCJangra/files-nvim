@@ -7,6 +7,7 @@ pub struct ExplorerConfig {
 	pub keymaps: ExplorerKeymaps,
 	pub fields: Vec<Field>,
 	pub name_width: usize,
+	pub column_seperator: String,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
