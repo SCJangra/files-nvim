@@ -24,6 +24,9 @@ pub enum Error {
 	#[error("NoFile({0})")]
 	NoFile(usize),
 
+	#[error("UnknownFile")]
+	UnknownFile,
+
 	#[error("Cancelled")]
 	Cancelled,
 

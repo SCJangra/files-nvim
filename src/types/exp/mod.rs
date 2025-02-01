@@ -7,7 +7,7 @@ use nav::*;
 
 use std::{
 	fmt::Write,
-	path::PathBuf,
+	path::{Path, PathBuf},
 	sync::{mpsc, LazyLock},
 };
 
@@ -190,6 +190,21 @@ impl Explorer {
 		Ok(())
 	}
 
+	fn open_file(&self, path: &Path) -> Result<()> {
+		let mime = tree_magic_mini::from_filepath(path).ok_or_else(|| Error::UnknownFile)?;
+
+		nvim::print!("{mime}");
+
+		match mime.starts_with("text/") {
+			true => api::command(format!("edit {}", path.to_str().unwrap_or_default()).as_str())?,
+			false => {
+				open::that_in_background(path);
+			},
+		};
+
+		Ok(())
+	}
+
 	#[inline(always)]
 	fn get_mut(buf: &Buffer) -> Result<RefMut<'_, Buffer, Self>> {
 		OPEN_EXPS.get_mut(buf).ok_or_else(|| Error::NoExplorer(*buf))
@@ -273,7 +288,7 @@ impl Explorer {
 
 		match file.ty {
 			FileType::DirectoryEmpty | FileType::DirectoryFull => self.list(file.path.clone(), Nav::New)?,
-			// TODO: Open files
+			FileType::File => self.open_file(file.path.as_path())?,
 			// TODO: Follow symbolic links
 			_ => nvim::print!("Unsupported operation"),
 		};
