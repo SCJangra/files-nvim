@@ -1,30 +1,12 @@
 #[macro_export]
-macro_rules! lua_interop {
+macro_rules! impl_pushable {
 	($type:ty) => {
-		impl nvim_oxi::conversion::FromObject for $type {
-			fn from_object(object: nvim_oxi::Object) -> std::result::Result<Self, nvim_oxi::conversion::Error> {
-				use nvim_oxi::serde::Deserializer;
-				use serde::Deserialize;
-
-				Self::deserialize(Deserializer::new(object)).map_err(Into::into)
-			}
-		}
-
 		impl nvim_oxi::conversion::ToObject for $type {
 			fn to_object(self) -> std::result::Result<nvim_oxi::Object, nvim_oxi::conversion::Error> {
 				use nvim_oxi::serde::Serializer;
 				use serde::Serialize;
 
 				self.serialize(Serializer::new()).map_err(Into::into)
-			}
-		}
-
-		impl nvim_oxi::lua::Poppable for $type {
-			unsafe fn pop(lstate: *mut nvim_oxi::lua::ffi::State) -> std::result::Result<Self, nvim_oxi::lua::Error> {
-				use nvim_oxi::{conversion::FromObject, Object};
-
-				let object = Object::pop(lstate)?;
-				Self::from_object(object).map_err(nvim_oxi::lua::Error::pop_error_from_err::<Self, _>)
 			}
 		}
 
@@ -40,5 +22,36 @@ macro_rules! lua_interop {
 					.push(lstate)
 			}
 		}
+	};
+}
+
+#[macro_export]
+macro_rules! impl_popable {
+	($type:ty) => {
+		impl nvim_oxi::conversion::FromObject for $type {
+			fn from_object(object: nvim_oxi::Object) -> std::result::Result<Self, nvim_oxi::conversion::Error> {
+				use nvim_oxi::serde::Deserializer;
+				use serde::Deserialize;
+
+				Self::deserialize(Deserializer::new(object)).map_err(Into::into)
+			}
+		}
+
+		impl nvim_oxi::lua::Poppable for $type {
+			unsafe fn pop(lstate: *mut nvim_oxi::lua::ffi::State) -> std::result::Result<Self, nvim_oxi::lua::Error> {
+				use nvim_oxi::{conversion::FromObject, Object};
+
+				let object = Object::pop(lstate)?;
+				Self::from_object(object).map_err(nvim_oxi::lua::Error::pop_error_from_err::<Self, _>)
+			}
+		}
+	};
+}
+
+#[macro_export]
+macro_rules! lua_interop {
+	($type:ty) => {
+		$crate::impl_pushable!($type);
+		$crate::impl_popable!($type);
 	};
 }
