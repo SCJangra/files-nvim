@@ -2,7 +2,7 @@
 macro_rules! lua_interop {
 	($type:ty) => {
 		impl nvim_oxi::conversion::FromObject for $type {
-			fn from_object(object: nvim_oxi::Object) -> Result<Self, nvim_oxi::conversion::Error> {
+			fn from_object(object: nvim_oxi::Object) -> std::result::Result<Self, nvim_oxi::conversion::Error> {
 				use nvim_oxi::serde::Deserializer;
 				use serde::Deserialize;
 
@@ -11,7 +11,7 @@ macro_rules! lua_interop {
 		}
 
 		impl nvim_oxi::conversion::ToObject for $type {
-			fn to_object(self) -> Result<nvim_oxi::Object, nvim_oxi::conversion::Error> {
+			fn to_object(self) -> std::result::Result<nvim_oxi::Object, nvim_oxi::conversion::Error> {
 				use nvim_oxi::serde::Serializer;
 				use serde::Serialize;
 
@@ -20,7 +20,7 @@ macro_rules! lua_interop {
 		}
 
 		impl nvim_oxi::lua::Poppable for $type {
-			unsafe fn pop(lstate: *mut nvim_oxi::lua::ffi::State) -> Result<Self, nvim_oxi::lua::Error> {
+			unsafe fn pop(lstate: *mut nvim_oxi::lua::ffi::State) -> std::result::Result<Self, nvim_oxi::lua::Error> {
 				use nvim_oxi::{conversion::FromObject, Object};
 
 				let object = Object::pop(lstate)?;
@@ -32,7 +32,7 @@ macro_rules! lua_interop {
 			unsafe fn push(
 				self,
 				lstate: *mut nvim_oxi::lua::ffi::State,
-			) -> Result<std::ffi::c_int, nvim_oxi::lua::Error> {
+			) -> std::result::Result<std::ffi::c_int, nvim_oxi::lua::Error> {
 				use nvim_oxi::conversion::ToObject;
 
 				self.to_object()
