@@ -258,18 +258,24 @@ impl Explorer {
 		self.list(dir.to_path_buf(), Nav::Up)
 	}
 
-	/// Open the file or enter the directory under cursor.
-	fn enter(&mut self) -> Result<()> {
+	fn current_file(&self) -> Result<&File> {
 		let win = api::get_current_win();
 		let buf = win.get_buf()?;
 
 		if buf != self.buf {
-			return Ok(());
+			return Err(Error::BufferMismatch);
 		}
 
 		// 0 is row, and row is 1-indexed
 		let index = win.get_cursor()?.0.saturating_sub(1);
 		let file = self.files.get(index).ok_or_else(|| Error::NoFile(index))?;
+
+		Ok(file)
+	}
+
+	/// Open the file or enter the directory under cursor.
+	fn enter(&mut self) -> Result<()> {
+		let file = self.current_file()?;
 
 		match file.ty {
 			FileType::DirectoryEmpty | FileType::DirectoryFull => self.list(file.path.clone(), Nav::New)?,
