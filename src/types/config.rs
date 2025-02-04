@@ -7,7 +7,10 @@ use nvim_oxi::{
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use crate::{traits::LogErr, Explorer, ExplorerConfig, ExplorerKeymaps, Field, File, FileType, Icon, Icons};
+use crate::{
+	error::*, traits::LogErr, Explorer, ExplorerConfig, ExplorerKeymaps, Field, File, FileType, Icon, Icons, Input,
+	Result,
+};
 
 /// Global configuration of the plugin.
 static mut CONFIG: Lazy<Arc<Config>> = Lazy::new(|| {
@@ -19,6 +22,7 @@ static mut CONFIG: Lazy<Arc<Config>> = Lazy::new(|| {
 				next: String::from("l"),
 				prev: String::from("h"),
 				up: String::from("<A-h>"),
+				rename: String::from("r"),
 			},
 			fields: vec![Field::Size],
 			name_width: 40,
@@ -31,6 +35,7 @@ static mut CONFIG: Lazy<Arc<Config>> = Lazy::new(|| {
 			dir_full: Icon { name: String::from(Explorer::DIR_HIGHLIGHT), icon: '' },
 			dir_empty: Icon { name: String::from(Explorer::DIR_HIGHLIGHT), icon: '' },
 		},
+		input: None,
 	})
 });
 
@@ -39,6 +44,7 @@ static mut CONFIG: Lazy<Arc<Config>> = Lazy::new(|| {
 pub struct Config {
 	pub explorer: ExplorerConfig,
 	pub icons: Icons,
+	pub input: Option<Input>,
 }
 
 impl Config {
@@ -94,6 +100,10 @@ impl Config {
 		}
 
 		&self.icons.default
+	}
+
+	pub fn input(&self) -> Result<&Input> {
+		self.input.as_ref().ok_or_else(|| Error::NoInputFn)
 	}
 }
 

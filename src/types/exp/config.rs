@@ -17,6 +17,7 @@ pub struct ExplorerKeymaps {
 	pub next: String,
 	pub prev: String,
 	pub up: String,
+	pub rename: String,
 }
 
 crate::lua_interop!(ExplorerConfig);
