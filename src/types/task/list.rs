@@ -11,8 +11,8 @@ use rayon::slice::ParallelSliceMut;
 use std::{path::PathBuf, sync::mpsc::Sender};
 
 use crate::{
-	error::Error,
-	types::{File, FileType, Result},
+	error::TaskError,
+	types::{File, FileType},
 };
 
 /// List the files of a directory.
@@ -28,7 +28,7 @@ pub struct ListResponse {
 }
 
 /// Value returned from a list task.
-pub type ListResult = Result<ListResponse>;
+pub type ListResult = Result<ListResponse, TaskError>;
 
 impl List {
 	pub fn new(dir: PathBuf, handler: AsyncHandle, sender: Sender<ListResult>) -> Self {
@@ -89,7 +89,7 @@ impl List {
 		all.extend_from_slice(&files);
 
 		match cancelled.load(atomic::Ordering::Acquire) {
-			true => Err(Error::Cancelled),
+			true => Err(TaskError::Cancelled),
 			false => Ok(ListResponse { files: all }),
 		}
 	}

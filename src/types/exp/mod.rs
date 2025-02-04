@@ -93,7 +93,7 @@ impl Explorer {
 		let handler = AsyncHandle::new(move || {
 			let response = match receiver.recv()? {
 				// Returning ok here because we don't want to log this error.
-				Err(Error::Cancelled) => return Ok(()),
+				Err(TaskError::Cancelled) => return Ok(()),
 				res => res?,
 			};
 

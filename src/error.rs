@@ -27,11 +27,20 @@ pub enum Error {
 	#[error("UnknownFile")]
 	UnknownFile,
 
-	#[error("Cancelled")]
-	Cancelled,
-
 	#[error("Fmt({0})")]
 	Fmt(#[from] fmt::Error),
+
+	#[error("TaskError({0})")]
+	Task(#[from] TaskError),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum TaskError {
+	#[error("Io({0})")]
+	Io(#[from] io::Error),
+
+	#[error("Cancelled")]
+	Cancelled,
 }
 
 impl From<nvim::api::Error> for Error {
