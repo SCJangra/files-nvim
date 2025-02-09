@@ -7,10 +7,7 @@ use nvim_oxi::{
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-	error::*, traits::LogErr, Explorer, ExplorerConfig, ExplorerKeymaps, Field, File, FileType, Icon, Icons, Input,
-	Result,
-};
+use crate::{error::*, traits::*, types::*};
 
 /// Global configuration of the plugin.
 static mut CONFIG: Lazy<Arc<Config>> = Lazy::new(|| {

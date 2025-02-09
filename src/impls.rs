@@ -1,7 +1,4 @@
-use crate::{
-	error::Error,
-	traits::{LogErr, WithModifiable},
-};
+use crate::{error::*, traits::*, types};
 
 use nvim_oxi::{
 	self as nvim,
@@ -42,7 +39,7 @@ impl Drop for Error {
 }
 
 impl WithModifiable for Buffer {
-	fn with_modifiable(&self, f: impl FnOnce() -> crate::Result<()>) -> crate::Result<()> {
+	fn with_modifiable(&self, f: impl FnOnce() -> types::Result<()>) -> types::Result<()> {
 		self.set_option("ma", true)?;
 		f()?;
 		self.set_option("ma", false)?;

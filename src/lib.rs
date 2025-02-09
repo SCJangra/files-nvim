@@ -3,9 +3,6 @@ use std::sync::LazyLock;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use nvim_oxi::{Dictionary, Function, Object};
 
-use traits::*;
-use types::*;
-
 mod error;
 mod impls;
 mod traits;
@@ -13,8 +10,8 @@ mod types;
 mod utils;
 
 pub(crate) struct Channels {
-	pub(crate) list: Sender<List>,
-	pub(crate) rename: Sender<Rename>,
+	pub(crate) list: Sender<types::List>,
+	pub(crate) rename: Sender<types::Rename>,
 }
 
 static CHANNELS: LazyLock<Channels> = LazyLock::new(|| {
@@ -28,27 +25,27 @@ static CHANNELS: LazyLock<Channels> = LazyLock::new(|| {
 });
 
 #[nvim_oxi::plugin]
-fn files_nvim() -> Result<Dictionary> {
+fn files_nvim() -> types::Result<Dictionary> {
 	Ok(Dictionary::from_iter([
-		("set_config", Object::from(Function::from_fn(Config::set_config))),
-		("get_config", Object::from(Function::from_fn(Config::get_config))),
+		("set_config", Object::from(Function::from_fn(types::Config::set_config))),
+		("get_config", Object::from(Function::from_fn(types::Config::get_config))),
 		(
 			"exp",
 			Object::from(Dictionary::from_iter([(
 				"open_current",
-				Object::from(Function::from_fn(Explorer::open_current)),
+				Object::from(Function::from_fn(types::Explorer::open_current)),
 			)])),
 		),
 	]))
 }
 
-fn list(r: Receiver<List>) {
+fn list(r: Receiver<types::List>) {
 	while let Ok(l) = r.recv() {
 		l.exec(&r);
 	}
 }
 
-fn rename(r: Receiver<Rename>) {
+fn rename(r: Receiver<types::Rename>) {
 	while let Ok(rename) = r.recv() {
 		rename.exec();
 	}

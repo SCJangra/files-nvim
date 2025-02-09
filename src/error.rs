@@ -3,8 +3,8 @@ use std::{fmt, io};
 use nvim_oxi::{self as nvim, api::Buffer};
 
 use crate::{
+	traits::LogErr,
 	types::{List, Rename},
-	LogErr,
 };
 
 #[derive(Debug, thiserror::Error)]
