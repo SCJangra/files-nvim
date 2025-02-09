@@ -45,7 +45,7 @@ impl List {
 
 		let cancelled = AtomicBool::new(false);
 
-		let (mut dirs, mut files): (Vec<_>, Vec<_>) = read_dir
+		let files: Vec<_> = read_dir
 			.par_bridge()
 			.take_any_while(|_| match r.is_empty() {
 				true => true,
@@ -77,20 +77,11 @@ impl List {
 				Ok::<_, io::Error>(File { path, ty, size: meta.size() })
 			})
 			.filter_map(|res| res.ok())
-			.partition(|f| matches!(f.ty, FileType::DirectoryFull | FileType::DirectoryEmpty));
-
-		rayon::join(
-			|| dirs.par_sort_by(|a, b| a.path.file_name().cmp(&b.path.file_name())),
-			|| files.par_sort_by(|a, b| a.path.file_name().cmp(&b.path.file_name())),
-		);
-
-		let mut all = Vec::with_capacity(dirs.len() + files.len());
-		all.extend_from_slice(&dirs);
-		all.extend_from_slice(&files);
+			.collect();
 
 		match cancelled.load(atomic::Ordering::Acquire) {
 			true => Err(TaskError::Cancelled),
-			false => Ok(ListResponse { files: all }),
+			false => Ok(ListResponse { files }),
 		}
 	}
 }

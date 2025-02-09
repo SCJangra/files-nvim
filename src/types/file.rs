@@ -1,3 +1,4 @@
+use std::ffi::OsStr;
 use std::path::PathBuf;
 
 use nvim_oxi::{self as nvim, api};
@@ -73,5 +74,17 @@ impl File {
 		Config::arc_clone().input()?.call((opts, cb))?;
 
 		Ok(())
+	}
+
+	pub(crate) fn is_dir(&self) -> bool {
+		matches!(self.ty, FileType::DirectoryEmpty | FileType::DirectoryFull)
+	}
+
+	pub(crate) fn name(&self) -> Option<&OsStr> {
+		self.path.file_name()
+	}
+
+	pub(crate) fn name_str(&self) -> Option<&str> {
+		self.name().and_then(|n| n.to_str())
 	}
 }

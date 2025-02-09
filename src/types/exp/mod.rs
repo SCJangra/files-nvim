@@ -4,6 +4,7 @@ mod nav;
 pub use config::*;
 
 use nav::*;
+use rayon::slice::ParallelSliceMut;
 
 use std::{
 	fmt::Write,
@@ -98,7 +99,16 @@ impl Explorer {
 				res => res?,
 			};
 
-			nvim::schedule(move |_| Self::do_list(response, buf, nav).unwrap_or_default());
+			nvim::schedule(move |_| {
+				Self::get_mut(&buf)
+					.and_then(|mut exp| {
+						exp.files = response.files;
+						exp.refresh()?;
+						Ok(())
+					})
+					// Returning error in `nvim::schedule` callback causes neovim to crash.
+					.unwrap_or_default()
+			});
 
 			Result::Ok(())
 		})?;
@@ -108,10 +118,15 @@ impl Explorer {
 		Ok(())
 	}
 
-	fn do_list(response: ListResponse, buf: Buffer, _nav: Nav) -> Result<()> {
+	/// Re-render the files in the explorer, this is called after renaming, creating, and deleting
+	/// some files.
+	fn refresh(&mut self) -> Result<()> {
 		let config = Config::arc_clone();
 
-		let lines = response.files.iter().map(|file| {
+		self.files
+			.par_sort_by(|a, b| (!a.is_dir(), a.name()).cmp(&(!b.is_dir(), b.name())));
+
+		let lines = self.files.iter().map(|file| {
 			let mut b = nvim::StringBuilder::new();
 
 			let name = file.path.file_name().unwrap_or_default().to_str().unwrap_or_default();
@@ -142,16 +157,13 @@ impl Explorer {
 			b.finish()
 		});
 
-		buf.with_modifiable(move || buf.set_lines(0.., true, lines).map_err(Into::into))?;
+		self.buf
+			.with_modifiable(|| self.buf.set_lines(0.., true, lines).map_err(Into::into))?;
 
-		let ns = { Self::get(&buf)?.ns };
-		buf.clear_namespace(ns, 0..)?;
-		for (index, icon) in response.files.iter().map(|f| config.icon(f)).enumerate() {
-			buf.add_highlight(ns, &icon.name, index, 0..1).ok();
+		self.buf.clear_namespace(self.ns, 0..)?;
+		for (index, icon) in self.files.iter().map(|f| config.icon(f)).enumerate() {
+			self.buf.add_highlight(self.ns, &icon.name, index, 0..1).ok();
 		}
-
-		let mut exp = Self::get_mut(&buf)?;
-		exp.files = response.files;
 
 		Ok(())
 	}
