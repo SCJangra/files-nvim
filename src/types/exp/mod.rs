@@ -9,7 +9,10 @@ use rayon::slice::ParallelSliceMut;
 use std::{
 	fmt::Write,
 	path::PathBuf,
-	sync::{mpsc, LazyLock},
+	sync::{
+		mpsc::{self, Receiver},
+		LazyLock,
+	},
 };
 
 use dashmap::{
@@ -114,6 +117,55 @@ impl Explorer {
 		})?;
 
 		CHANNELS.list.send(List::new(dir, handler, sender)).map_err(Error::SendList)?;
+
+		Ok(())
+	}
+
+	fn on_renamed(buf: Buffer, receiver: Receiver<RenameResult>) -> impl FnMut() -> Result<()> {
+		move || {
+			let response = receiver.recv()??;
+
+			let mut exp = Self::get_mut(&buf)?;
+
+			match response {
+				RenameResponse::Single { index, name } => {
+					exp.files
+						.get_mut(index)
+						.ok_or_else(|| Error::NoFile(index))?
+						.path
+						.set_file_name(name);
+				},
+			}
+
+			nvim::schedule(move |_| Self::get_mut(&buf).and_then(|mut exp| exp.refresh()).unwrap_or_default());
+
+			Ok(())
+		}
+	}
+
+	fn rename(&self) -> Result<()> {
+		let index = self.current_index()?;
+		let file = self.current_file()?;
+
+		let name = file.name_str().unwrap_or_default().to_string();
+		let file = file.path.clone();
+
+		let (sender, receiver) = mpsc::channel::<RenameResult>();
+
+		let handler = AsyncHandle::new(Self::on_renamed(self.buf, receiver))?;
+
+		let on_new_name = nvim::Function::from_fn_once(move |maybe_name: Option<String>| {
+			let Some(new_name) = maybe_name else { return Result::Ok(()) };
+
+			CHANNELS
+				.rename
+				.send(Rename::single(index, file, new_name, handler, sender))
+				.map_err(Error::SendRename)
+		});
+
+		let opts = InputOpts { prompt: String::from("Rename: "), default: name };
+
+		Config::arc_clone().input()?.call((opts, on_new_name))?;
 
 		Ok(())
 	}
@@ -252,7 +304,7 @@ impl Explorer {
 	}
 
 	fn map_rename(buf: Buffer) -> SetKeymapOpts {
-		let cb = move |_| Self::get(&buf).and_then(|exp| exp.current_file()?.rename());
+		let cb = move |_| Self::get(&buf).and_then(|exp| exp.rename());
 		SetKeymapOpts::builder().callback(cb).build()
 	}
 }
@@ -277,6 +329,13 @@ impl Explorer {
 	}
 
 	fn current_file(&self) -> Result<&File> {
+		let index = self.current_index()?;
+		let file = self.files.get(index).ok_or_else(|| Error::NoFile(index))?;
+
+		Ok(file)
+	}
+
+	fn current_index(&self) -> Result<usize> {
 		let win = api::get_current_win();
 		let buf = win.get_buf()?;
 
@@ -286,9 +345,8 @@ impl Explorer {
 
 		// 0 is row, and row is 1-indexed
 		let index = win.get_cursor()?.0.saturating_sub(1);
-		let file = self.files.get(index).ok_or_else(|| Error::NoFile(index))?;
 
-		Ok(file)
+		Ok(index)
 	}
 
 	/// Open the file or enter the directory under cursor.

@@ -14,12 +14,17 @@ mod utils;
 
 pub(crate) struct Channels {
 	pub(crate) list: Sender<List>,
+	pub(crate) rename: Sender<Rename>,
 }
 
 static CHANNELS: LazyLock<Channels> = LazyLock::new(|| {
 	let (list_s, list_r) = unbounded();
 	std::thread::spawn(|| list(list_r));
-	Channels { list: list_s }
+
+	let (rename_s, rename_r) = unbounded();
+	std::thread::spawn(|| rename(rename_r));
+
+	Channels { list: list_s, rename: rename_s }
 });
 
 #[nvim_oxi::plugin]
@@ -40,5 +45,11 @@ fn files_nvim() -> Result<Dictionary> {
 fn list(r: Receiver<List>) {
 	while let Ok(l) = r.recv() {
 		l.exec(&r);
+	}
+}
+
+fn rename(r: Receiver<Rename>) {
+	while let Ok(rename) = r.recv() {
+		rename.exec();
 	}
 }
