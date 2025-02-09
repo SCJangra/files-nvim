@@ -32,6 +32,12 @@ pub enum Error {
 
 	#[error("TaskError({0})")]
 	Task(#[from] TaskError),
+
+	#[error("BufferMismatch")]
+	BufferMismatch,
+
+	#[error("NoInputFn")]
+	NoInputFn,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -52,6 +58,12 @@ impl From<nvim::api::Error> for Error {
 impl From<nvim::libuv::Error> for Error {
 	fn from(value: nvim::libuv::Error) -> Self {
 		Self::from(nvim::Error::Libuv(value))
+	}
+}
+
+impl From<nvim::lua::Error> for Error {
+	fn from(value: nvim::lua::Error) -> Self {
+		Self::from(nvim::Error::Lua(value))
 	}
 }
 

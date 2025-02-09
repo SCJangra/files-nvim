@@ -67,6 +67,7 @@ impl Explorer {
 		self.buf.set_keymap(mode, &maps.next, "", &Self::map_next(self.buf))?;
 		self.buf.set_keymap(mode, &maps.prev, "", &Self::map_prev(self.buf))?;
 		self.buf.set_keymap(mode, &maps.up, "", &Self::map_up(self.buf))?;
+		self.buf.set_keymap(mode, &maps.rename, "", &Self::map_rename(self.buf))?;
 
 		Ok(())
 	}
@@ -235,6 +236,11 @@ impl Explorer {
 
 	fn map_quit(buf: Buffer) -> SetKeymapOpts {
 		let cb = move |_| Self::remove(&buf).and_then(|exp| exp.quit());
+		SetKeymapOpts::builder().callback(cb).build()
+	}
+
+	fn map_rename(buf: Buffer) -> SetKeymapOpts {
+		let cb = move |_| Self::get(&buf).and_then(|exp| exp.current_file()?.rename());
 		SetKeymapOpts::builder().callback(cb).build()
 	}
 }

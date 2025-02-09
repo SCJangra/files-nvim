@@ -1,9 +1,11 @@
 use std::path::PathBuf;
 
-use nvim_oxi::api;
+use nvim_oxi::{self as nvim, api};
 use serde::{Deserialize, Serialize};
 
 use crate::{error::Error, lua_interop, types::Result};
+
+use crate::{Config, InputOpts};
 
 /// A file.
 #[derive(Clone)]
@@ -41,6 +43,34 @@ impl File {
 		} else {
 			open::that_in_background(path);
 		};
+
+		Ok(())
+	}
+
+	pub(crate) fn rename(&self) -> Result<()> {
+		let name = self
+			.path
+			.file_name()
+			.unwrap_or_default()
+			.to_str()
+			.unwrap_or_default()
+			.to_string();
+
+		let from = self.path.clone();
+
+		let opts = InputOpts { prompt: String::from("Rename: "), default: name };
+		let cb = nvim::Function::from_fn_once(move |maybe_name: Option<String>| {
+			let Some(name) = maybe_name else { return Result::Ok(()) };
+
+			let mut to = from.clone();
+			to.set_file_name(name);
+
+			// TODO: Proper error handling
+			std::fs::rename(from, to)?;
+			Ok(())
+		});
+
+		Config::arc_clone().input()?.call((opts, cb))?;
 
 		Ok(())
 	}
