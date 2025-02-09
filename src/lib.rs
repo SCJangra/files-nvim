@@ -12,10 +12,14 @@ mod traits;
 mod types;
 mod utils;
 
-static LIST: LazyLock<Sender<List>> = LazyLock::new(|| {
-	let (s, r) = unbounded();
-	std::thread::spawn(|| list(r));
-	s
+pub(crate) struct Channels {
+	pub(crate) list: Sender<List>,
+}
+
+static CHANNELS: LazyLock<Channels> = LazyLock::new(|| {
+	let (list_s, list_r) = unbounded();
+	std::thread::spawn(|| list(list_r));
+	Channels { list: list_s }
 });
 
 #[nvim_oxi::plugin]

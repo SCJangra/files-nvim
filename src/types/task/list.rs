@@ -7,7 +7,6 @@ use std::{
 use crossbeam_channel::Receiver;
 use nvim_oxi::libuv::AsyncHandle;
 use rayon::iter::{ParallelBridge, ParallelIterator};
-use rayon::slice::ParallelSliceMut;
 use std::{path::PathBuf, sync::mpsc::Sender};
 
 use crate::{

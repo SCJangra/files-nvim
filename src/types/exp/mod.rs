@@ -27,7 +27,7 @@ use nvim_oxi::{
 	libuv::AsyncHandle,
 };
 
-use crate::{error::*, types::*, utils::fun, WithModifiable, LIST};
+use crate::{error::*, types::*, utils::fun, WithModifiable, CHANNELS};
 
 /// A map from [`Buffer`] to [`Explorer`] for all active explorers.
 static OPEN_EXPS: LazyLock<DashMap<Buffer, Explorer>> = LazyLock::new(DashMap::new);
@@ -113,7 +113,7 @@ impl Explorer {
 			Result::Ok(())
 		})?;
 
-		LIST.send(List::new(dir, handler, sender)).map_err(Error::SendList)?;
+		CHANNELS.list.send(List::new(dir, handler, sender)).map_err(Error::SendList)?;
 
 		Ok(())
 	}
