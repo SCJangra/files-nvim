@@ -1,16 +1,15 @@
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
 use nvim_oxi::{
 	conversion::{FromObject, ToObject},
 	Object,
 };
-use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
 use crate::{error::*, traits::*, types::*};
 
 /// Global configuration of the plugin.
-static mut CONFIG: Lazy<Arc<Config>> = Lazy::new(|| {
+static mut CONFIG: LazyLock<Arc<Config>> = LazyLock::new(|| {
 	Arc::new(Config {
 		explorer: ExplorerConfig {
 			keymaps: ExplorerKeymaps {
@@ -64,7 +63,11 @@ impl Config {
 	/// Replace the current configuration by the given [`Object`].
 	pub fn set_config(object: Object) {
 		let Ok(config) = Self::from_object(object).log_error() else { return };
-		unsafe { *CONFIG = Arc::new(config) };
+		let config = Arc::new(config);
+		unsafe {
+			let ptr = (&*CONFIG) as *const _ as *mut Arc<Self>;
+			std::ptr::replace(ptr, config)
+		};
 	}
 
 	/// Returns the icon for a given file path.
