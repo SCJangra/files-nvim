@@ -2,10 +2,7 @@ use std::{fmt, io};
 
 use nvim_oxi::{self as nvim, api::Buffer};
 
-use crate::{
-	traits::LogErr,
-	types::{List, Rename},
-};
+use crate::traits::LogErr;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -14,12 +11,6 @@ pub enum Error {
 
 	#[error("Nvim({0})")]
 	Nvim(#[from] nvim::Error),
-
-	#[error("SendList({0:?})")]
-	SendList(crossbeam_channel::SendError<List>),
-
-	#[error("SendRename({0:?})")]
-	SendRename(crossbeam_channel::SendError<Rename>),
 
 	#[error("RecvError({0})")]
 	RecvResult(#[from] std::sync::mpsc::RecvError),
@@ -44,6 +35,9 @@ pub enum Error {
 
 	#[error("NoInputFn")]
 	NoInputFn,
+
+	#[error("RecvMsg({0})")]
+	RecvMsg(#[from] crossbeam_channel::TryRecvError),
 }
 
 #[derive(Debug, thiserror::Error)]

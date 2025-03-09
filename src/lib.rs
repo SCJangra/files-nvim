@@ -1,28 +1,13 @@
-use std::sync::LazyLock;
-
-use crossbeam_channel::{unbounded, Receiver, Sender};
 use nvim_oxi::{Dictionary, Function, Object};
 
 mod error;
 mod impls;
+mod msg;
+mod task;
+mod task_manager;
 mod traits;
 mod types;
 mod utils;
-
-pub(crate) struct Channels {
-	pub(crate) list: Sender<types::List>,
-	pub(crate) rename: Sender<types::Rename>,
-}
-
-static CHANNELS: LazyLock<Channels> = LazyLock::new(|| {
-	let (list_s, list_r) = unbounded();
-	std::thread::spawn(|| list(list_r));
-
-	let (rename_s, rename_r) = unbounded();
-	std::thread::spawn(|| rename(rename_r));
-
-	Channels { list: list_s, rename: rename_s }
-});
 
 #[nvim_oxi::plugin]
 fn files_nvim() -> types::Result<Dictionary> {
@@ -37,16 +22,4 @@ fn files_nvim() -> types::Result<Dictionary> {
 			)])),
 		),
 	]))
-}
-
-fn list(r: Receiver<types::List>) {
-	while let Ok(l) = r.recv() {
-		l.exec(&r);
-	}
-}
-
-fn rename(r: Receiver<types::Rename>) {
-	while let Ok(rename) = r.recv() {
-		rename.exec();
-	}
 }

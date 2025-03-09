@@ -7,11 +7,7 @@ pub use config::*;
 use nav::*;
 use rayon::slice::ParallelSliceMut;
 
-use std::{
-	fmt::Write,
-	path::PathBuf,
-	sync::{mpsc, LazyLock},
-};
+use std::{fmt::Write, path::PathBuf, sync::LazyLock};
 
 use dashmap::{
 	mapref::one::{Ref, RefMut},
@@ -28,7 +24,15 @@ use nvim_oxi::{
 	libuv::AsyncHandle,
 };
 
-use crate::{error::*, traits::*, types::*, utils::fun, CHANNELS};
+use crate::{
+	error::*,
+	msg::{self, Msg},
+	task,
+	task_manager::TaskManager,
+	traits::*,
+	types::*,
+	utils::fun,
+};
 
 /// A map from [`Buffer`] to [`Explorer`] for all active explorers.
 static OPEN_EXPS: LazyLock<DashMap<Buffer, Explorer>> = LazyLock::new(DashMap::new);
@@ -40,6 +44,7 @@ pub struct Explorer {
 	ns: u32,
 	files: Vec<File>,
 	nav: Navigator,
+	task: TaskManager,
 }
 
 /// How to open a new file explorer.
@@ -90,31 +95,8 @@ impl Explorer {
 			Nav::Noop => (),
 		}
 
-		let (sender, receiver) = mpsc::channel::<ListResult>();
-
-		let buf = self.buf;
-		let handler = AsyncHandle::new(move || {
-			let response = match receiver.recv()? {
-				// Returning ok here because we don't want to log this error.
-				Err(TaskError::Cancelled) => return Ok(()),
-				res => res?,
-			};
-
-			nvim::schedule(move |_| {
-				Self::get_mut(&buf)
-					.and_then(|mut exp| {
-						exp.files = response.files;
-						exp.refresh()?;
-						Ok(())
-					})
-					// Returning error in `nvim::schedule` callback causes neovim to crash.
-					.unwrap_or_default()
-			});
-
-			Result::Ok(())
-		})?;
-
-		CHANNELS.list.send(List::new(dir, handler, sender)).map_err(Error::SendList)?;
+		self.task
+			.spawn_atomic(task::List::new(dir), |res| res.map(|files| Msg::List(msg::List::new(files))));
 
 		Ok(())
 	}
@@ -193,7 +175,54 @@ impl Explorer {
 
 		win.set_buf(&buf)?;
 
-		let mut exp = Explorer { buf, ns, files: Vec::new(), nav: Navigator::new(dir.clone()) };
+		let (msg_sender, msg_receiver) = crossbeam_channel::unbounded::<std::result::Result<Msg, TaskError>>();
+		let handle = AsyncHandle::new(move || {
+			while let Ok(msg) = msg_receiver.try_recv() {
+				// The map is so that the error is logged when it is dropped.
+				let Ok(msg) = msg.map_err(Error::from) else { continue };
+
+				match msg {
+					Msg::List(list) => nvim::schedule(move |_| {
+						Self::get_mut(&buf)
+							.and_then(|mut exp| {
+								exp.files = list.files;
+								exp.refresh()?;
+								Ok(())
+							})
+							// Returning error in `nvim::schedule` callback causes neovim to crash.
+							.unwrap_or_default()
+					}),
+					Msg::TaskDone(index) => nvim::schedule(move |_| {
+						Self::get_mut(&buf)
+							.map(|mut exp| exp.task.remove_task(index))
+							// Returning error in `nvim::schedule` callback causes neovim to crash.
+							.unwrap_or_default()
+					}),
+					Msg::Rename(file_index, new_name) => nvim::schedule(move |_| {
+						Self::get_mut(&buf).and_then(|mut exp| {
+							exp.files
+								.get_mut(file_index)
+								.ok_or_else(|| Error::NoFile(file_index))?
+								.path
+								.set_file_name(new_name);
+
+							exp.refresh()?;
+							Ok(())
+						})
+					}),
+				}
+			}
+
+			Result::Ok(())
+		})?;
+
+		let mut exp = Explorer {
+			buf,
+			ns,
+			files: Vec::new(),
+			nav: Navigator::new(dir.clone()),
+			task: TaskManager::new(handle, msg_sender),
+		};
 
 		exp.setup_keymaps()?;
 		exp.setup_opts()?;
