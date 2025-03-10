@@ -26,7 +26,7 @@ use nvim_oxi::{
 
 use crate::{
 	error::*,
-	msg::{self, Msg},
+	msg::{Msg, MsgResult},
 	task,
 	task_manager::TaskManager,
 	traits::*,
@@ -96,7 +96,7 @@ impl Explorer {
 		}
 
 		self.task
-			.spawn_atomic(task::List::new(dir), |res| res.map(|files| Msg::List(msg::List::new(files))));
+			.spawn_atomic(task::List::new(dir), |res| res.map(|files| Msg::List(files)));
 
 		Ok(())
 	}
@@ -175,42 +175,12 @@ impl Explorer {
 
 		win.set_buf(&buf)?;
 
-		let (msg_sender, msg_receiver) = crossbeam_channel::unbounded::<std::result::Result<Msg, TaskError>>();
+		let (msg_sender, msg_receiver) = crossbeam_channel::unbounded::<MsgResult>();
 		let handle = AsyncHandle::new(move || {
 			while let Ok(msg) = msg_receiver.try_recv() {
 				// The map is so that the error is logged when it is dropped.
 				let Ok(msg) = msg.map_err(Error::from) else { continue };
-
-				match msg {
-					Msg::List(list) => nvim::schedule(move |_| {
-						Self::get_mut(&buf)
-							.and_then(|mut exp| {
-								exp.files = list.files;
-								exp.refresh()?;
-								Ok(())
-							})
-							// Returning error in `nvim::schedule` callback causes neovim to crash.
-							.unwrap_or_default()
-					}),
-					Msg::TaskDone(index) => nvim::schedule(move |_| {
-						Self::get_mut(&buf)
-							.map(|mut exp| exp.task.remove_task(index))
-							// Returning error in `nvim::schedule` callback causes neovim to crash.
-							.unwrap_or_default()
-					}),
-					Msg::Rename(file_index, new_name) => nvim::schedule(move |_| {
-						Self::get_mut(&buf).and_then(|mut exp| {
-							exp.files
-								.get_mut(file_index)
-								.ok_or_else(|| Error::NoFile(file_index))?
-								.path
-								.set_file_name(new_name);
-
-							exp.refresh()?;
-							Ok(())
-						})
-					}),
-				}
+				nvim::schedule(move |_| Self::update(buf, msg).unwrap_or_default());
 			}
 
 			Result::Ok(())
@@ -229,6 +199,28 @@ impl Explorer {
 		exp.list(dir, Nav::Noop)?;
 
 		Self::insert(buf, exp);
+
+		Ok(())
+	}
+
+	fn update(buf: Buffer, msg: Msg) -> Result<()> {
+		let mut exp = Self::get_mut(&buf)?;
+
+		match msg {
+			Msg::List(files) => {
+				exp.files = files;
+				exp.refresh()?;
+			},
+			Msg::TaskDone(index) => exp.task.remove_task(index),
+			Msg::Rename(file_index, new_name) => {
+				exp.files
+					.get_mut(file_index)
+					.ok_or_else(|| Error::NoFile(file_index))?
+					.path
+					.set_file_name(new_name);
+				exp.refresh()?;
+			},
+		}
 
 		Ok(())
 	}

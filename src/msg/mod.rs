@@ -1,11 +1,7 @@
-mod list;
-
-pub(crate) use list::List;
-
-use crate::error::TaskError;
+use crate::{error::TaskError, types::File};
 
 pub(crate) enum Msg {
-	List(List),
+	List(Vec<File>),
 	TaskDone(usize),
 	Rename(usize, String),
 }
