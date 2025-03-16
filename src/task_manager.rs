@@ -6,11 +6,10 @@ use std::{
 
 use crossbeam_channel::Sender;
 use nvim_oxi::libuv::AsyncHandle;
-use rayon::iter::ParallelIterator;
 
 use crate::{
 	msg::{Msg, MsgResult},
-	traits::{AtomicTask, Task, TaskHandle},
+	traits::{AtomicTask, IterExt, Task, TaskHandle},
 };
 
 type ArcTaskHandle = Arc<dyn TaskHandle + Send + Sync>;
@@ -38,8 +37,18 @@ impl TaskManager {
 		let done = self.msg.clone();
 
 		rayon::spawn(move || {
-			task.execute().for_each(|p| msg(Some(p)));
+			let iter = match task.execute() {
+				Ok(iter) => iter,
+				Err(err) => {
+					done.send(Ok(Msg::TaskError(index, err))).ok();
+					return;
+				},
+			};
+
+			iter.for_each_interval(task.update_interval(), |p| msg(Some(p)));
+
 			msg(None);
+
 			done.send(Ok(Msg::TaskDone(index))).ok();
 		});
 	}

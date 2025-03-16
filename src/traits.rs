@@ -1,6 +1,6 @@
-use rayon::iter::ParallelIterator;
+use std::time::{Duration, Instant};
 
-use crate::types::Result;
+use crate::{task::TaskResult, types::Result};
 
 pub trait LogErr {
 	fn log_err(&self);
@@ -16,7 +16,9 @@ pub trait Task {
 	type Progress;
 
 	/// Execute this task.
-	fn execute(&self) -> impl ParallelIterator<Item = Self::Progress>;
+	fn execute(&self) -> TaskResult<impl Iterator<Item = Self::Progress>>;
+
+	fn update_interval(&self) -> Duration;
 }
 
 pub trait AtomicTask {
@@ -37,4 +39,23 @@ pub trait TaskHandle {
 	/// Whether a single instance of this task should exist at a time. For tasks that are `unique`,
 	/// starting a new instance cancels the previous one.
 	fn is_unique(&self) -> bool;
+}
+
+pub trait IterExt: Iterator + Sized {
+	fn for_each_interval<F>(self, interval: Duration, mut func: F)
+	where
+		F: FnMut(Self::Item),
+	{
+		let mut time = Instant::now();
+
+		self.for_each(|item| {
+			if time.elapsed() < interval {
+				return;
+			}
+
+			func(item);
+
+			time = Instant::now();
+		});
+	}
 }

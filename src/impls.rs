@@ -46,3 +46,5 @@ impl WithModifiable for Buffer {
 		Ok(())
 	}
 }
+
+impl<I: Iterator> IterExt for I {}

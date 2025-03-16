@@ -209,20 +209,25 @@ impl Explorer {
 		match msg {
 			Msg::List(files) => {
 				exp.files = files;
-				exp.refresh()?;
+				exp.refresh()
 			},
-			Msg::TaskDone(index) => exp.task.remove_task(index),
+			Msg::TaskDone(index) => {
+				exp.task.remove_task(index);
+				Ok(())
+			},
+			Msg::TaskError(index, err) => {
+				exp.task.remove_task(index);
+				Err(err.into())
+			},
 			Msg::Rename(file_index, new_name) => {
 				exp.files
 					.get_mut(file_index)
 					.ok_or_else(|| Error::NoFile(file_index))?
 					.path
 					.set_file_name(new_name);
-				exp.refresh()?;
+				exp.refresh()
 			},
 		}
-
-		Ok(())
 	}
 
 	#[inline(always)]
