@@ -7,7 +7,7 @@ pub use config::*;
 use nav::*;
 use rayon::slice::ParallelSliceMut;
 
-use std::{fmt::Write, path::PathBuf, sync::LazyLock};
+use std::{fmt::Write, ops::RangeInclusive, path::PathBuf, sync::LazyLock};
 
 use dashmap::{
 	mapref::one::{Ref, RefMut},
@@ -24,15 +24,7 @@ use nvim_oxi::{
 	libuv::AsyncHandle,
 };
 
-use crate::{
-	error::*,
-	msg::{Msg, MsgResult},
-	task,
-	task_manager::TaskManager,
-	traits::*,
-	types::*,
-	utils::fun,
-};
+use crate::{clipboard::*, error::*, msg::*, task, task_manager::*, traits::*, types::*, utils::fun};
 
 /// A map from [`Buffer`] to [`Explorer`] for all active explorers.
 static OPEN_EXPS: LazyLock<DashMap<Buffer, Explorer>> = LazyLock::new(DashMap::new);
@@ -45,6 +37,7 @@ pub struct Explorer {
 	files: Vec<File>,
 	nav: Navigator,
 	task: TaskManager,
+	cb: Clipboard,
 }
 
 /// How to open a new file explorer.
@@ -62,6 +55,28 @@ impl Explorer {
 	/// Highlight group name for a directory icon.
 	pub const DIR_HIGHLIGHT: &str = "FilesNvimDirectoryIcon";
 
+	pub(crate) fn selected_files(&self) -> Result<RangeInclusive<usize>> {
+		let mode = api::get_mode()?.mode;
+
+		let range = if mode.is_visual() {
+			let from: Vec<usize> = api::call_function("getpos", ('v',))?;
+			let to: Vec<usize> = api::call_function("getpos", ('.',))?;
+
+			api::input("<ESC>")?;
+
+			// Indexing here is one-based, so subtracting by 1.
+			let from = from[1] - 1;
+			let to = to[1] - 1;
+
+			from..=to
+		} else {
+			let current = self.current_index()?;
+			current..=current
+		};
+
+		Ok(range)
+	}
+
 	/// Setup key mappings for this explorer.
 	pub fn setup_keymaps(&self) -> Result<()> {
 		// NOTE: Key maps won't automatically refresh if the configuration is changed.
@@ -75,6 +90,9 @@ impl Explorer {
 		self.buf.set_keymap(mode, &maps.prev, "", &Self::map_prev(self.buf))?;
 		self.buf.set_keymap(mode, &maps.up, "", &Self::map_up(self.buf))?;
 		self.buf.set_keymap(mode, &maps.rename, "", &Self::map_rename(self.buf))?;
+
+		self.buf.set_keymap(Mode::Normal, &maps.copy, "", &Self::map_copy(self.buf))?;
+		self.buf.set_keymap(Mode::Visual, &maps.copy, "", &Self::map_copy(self.buf))?;
 
 		Ok(())
 	}
@@ -192,6 +210,7 @@ impl Explorer {
 			files: Vec::new(),
 			nav: Navigator::new(dir.clone()),
 			task: TaskManager::new(handle, msg_sender),
+			cb: Clipboard::new(),
 		};
 
 		exp.setup_keymaps()?;
@@ -228,6 +247,26 @@ impl Explorer {
 				exp.refresh()
 			},
 		}
+	}
+
+	fn copy(&mut self) -> Result<()> {
+		let mut indices = self.selected_files()?;
+
+		// PERF: Allocate with capacity
+		let mut files = Vec::new();
+
+		indices.try_for_each(|index| {
+			// PERF: This clone can be optimized.
+			let file = self.files.get(index).cloned().ok_or_else(|| Error::NoFile(index))?;
+			files.push(file);
+
+			Result::Ok(())
+		})?;
+
+		self.cb.files = files;
+		self.cb.action = CbAction::Copy;
+
+		Ok(())
 	}
 
 	#[inline(always)]
@@ -280,6 +319,11 @@ impl Explorer {
 
 	fn map_rename(buf: Buffer) -> SetKeymapOpts {
 		let cb = move |_| Self::get(&buf).and_then(|exp| exp.rename());
+		SetKeymapOpts::builder().callback(cb).build()
+	}
+
+	fn map_copy(buf: Buffer) -> SetKeymapOpts {
+		let cb = move |_| Self::get_mut(&buf).and_then(|mut exp| exp.copy());
 		SetKeymapOpts::builder().callback(cb).build()
 	}
 }

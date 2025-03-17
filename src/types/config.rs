@@ -19,6 +19,7 @@ static mut CONFIG: LazyLock<Arc<Config>> = LazyLock::new(|| {
 				prev: String::from("h"),
 				up: String::from("<A-h>"),
 				rename: String::from("r"),
+				copy: String::from("y"),
 			},
 			fields: vec![Field::Size],
 			name_width: 40,

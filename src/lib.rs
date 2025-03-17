@@ -1,5 +1,6 @@
 use nvim_oxi::{Dictionary, Function, Object};
 
+mod clipboard;
 mod error;
 mod impls;
 mod msg;
