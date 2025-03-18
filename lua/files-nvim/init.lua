@@ -1,3 +1,5 @@
+local api = vim.api
+
 local prefix = function(icon)
   return {
     icon = icon.icon,
@@ -23,6 +25,10 @@ local setup = function(opts)
   local config = vim.tbl_deep_extend('force', plugin.get_config(), {
     icons = icons,
     input = vim.ui.input,
+    get_mode = function()
+      local mode = api.nvim_get_mode().mode
+      return string.byte(mode)
+    end,
   }, opts)
   plugin.set_config(config)
 end

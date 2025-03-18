@@ -2,7 +2,7 @@ use std::sync::{Arc, LazyLock};
 
 use nvim_oxi::{
 	conversion::{FromObject, ToObject},
-	Object,
+	Function, Object,
 };
 use serde::{Deserialize, Serialize};
 
@@ -33,6 +33,11 @@ static mut CONFIG: LazyLock<Arc<Config>> = LazyLock::new(|| {
 			dir_empty: Icon { name: String::from(Explorer::DIR_HIGHLIGHT), icon: '' },
 		},
 		input: None,
+		get_mode: Function::from_fn(|_| {
+			unimplemented!("pass the `get_mode` function in config");
+			#[allow(unreachable_code)]
+			0
+		}),
 	})
 });
 
@@ -42,6 +47,7 @@ pub struct Config {
 	pub explorer: ExplorerConfig,
 	pub icons: Icons,
 	pub input: Option<Input>,
+	pub get_mode: Function<(), i32>,
 }
 
 impl Config {
@@ -105,6 +111,10 @@ impl Config {
 
 	pub fn input(&self) -> Result<&Input> {
 		self.input.as_ref().ok_or_else(|| Error::NoInputFn)
+	}
+
+	pub fn get_mode(&self) -> Result<i32> {
+		self.get_mode.call(()).map_err(Into::into)
 	}
 }
 

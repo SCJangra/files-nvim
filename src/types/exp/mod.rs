@@ -56,9 +56,17 @@ impl Explorer {
 	pub const DIR_HIGHLIGHT: &str = "FilesNvimDirectoryIcon";
 
 	pub(crate) fn selected_files(&self) -> Result<RangeInclusive<usize>> {
-		let mode = api::get_mode()?.mode;
+		let mode = Config::arc_clone().get_mode()?;
 
-		let range = if mode.is_visual() {
+		let normal = 110;
+		let visual = 118;
+		let visual_line = 86;
+		let visual_block = 22;
+
+		let range = if mode == normal {
+			let current = self.current_index()?;
+			current..=current
+		} else if mode == visual || mode == visual_line || mode == visual_block {
 			let from: Vec<usize> = api::call_function("getpos", ('v',))?;
 			let to: Vec<usize> = api::call_function("getpos", ('.',))?;
 
@@ -70,8 +78,7 @@ impl Explorer {
 
 			from..=to
 		} else {
-			let current = self.current_index()?;
-			current..=current
+			return Err(Error::InvalidMode);
 		};
 
 		Ok(range)

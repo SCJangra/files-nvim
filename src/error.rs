@@ -38,6 +38,9 @@ pub enum Error {
 
 	#[error("RecvMsg({0})")]
 	RecvMsg(#[from] crossbeam_channel::TryRecvError),
+
+	#[error("InvalidMode")]
+	InvalidMode,
 }
 
 #[derive(Debug, thiserror::Error)]
