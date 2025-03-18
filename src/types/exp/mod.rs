@@ -258,22 +258,19 @@ impl Explorer {
 	fn copy(&mut self) -> Result<()> {
 		let mut indices = self.selected_files()?;
 
-		// PERF: Allocate with capacity
-		let mut files = Vec::new();
-
 		indices.try_for_each(|index| {
 			// PERF: This clone can be optimized.
 			let file = self.files.get(index).cloned().ok_or_else(|| Error::NoFile(index))?;
-			files.push(file);
+
+			self.cb.cut.remove(&file);
+
+			match self.cb.copy.contains(&file) {
+				true => self.cb.copy.remove(&file),
+				false => self.cb.copy.insert(file),
+			};
 
 			Result::Ok(())
 		})?;
-
-		files.into_iter().for_each(|file| {
-			self.cb.files.insert(file);
-		});
-
-		self.cb.action = CbAction::Copy;
 
 		Ok(())
 	}
