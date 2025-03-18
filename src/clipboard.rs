@@ -1,7 +1,9 @@
+use std::collections::BTreeSet;
+
 use crate::types::File;
 
 pub(crate) struct Clipboard {
-	pub files: Vec<File>,
+	pub files: BTreeSet<File>,
 	pub action: CbAction,
 }
 
@@ -13,6 +15,6 @@ pub(crate) enum CbAction {
 
 impl Clipboard {
 	pub(crate) fn new() -> Self {
-		Self { files: Vec::new(), action: CbAction::Copy }
+		Self { files: BTreeSet::new(), action: CbAction::Copy }
 	}
 }

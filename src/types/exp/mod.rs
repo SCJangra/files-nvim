@@ -269,7 +269,10 @@ impl Explorer {
 			Result::Ok(())
 		})?;
 
-		self.cb.files = files;
+		files.into_iter().for_each(|file| {
+			self.cb.files.insert(file);
+		});
+
 		self.cb.action = CbAction::Copy;
 
 		Ok(())

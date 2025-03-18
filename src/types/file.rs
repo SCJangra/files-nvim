@@ -7,14 +7,14 @@ use serde::{Deserialize, Serialize};
 use crate::{error::Error, lua_interop, types::Result};
 
 /// A file.
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct File {
 	pub path: PathBuf,
 	pub ty: FileType,
 	pub size: u64,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum FileType {
 	File,
 	DirectoryEmpty,
@@ -56,5 +56,17 @@ impl File {
 
 	pub(crate) fn name_str(&self) -> Option<&str> {
 		self.name().and_then(|n| n.to_str())
+	}
+}
+
+impl Ord for File {
+	fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+		self.path.cmp(&other.path)
+	}
+}
+
+impl PartialOrd for File {
+	fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+		self.path.partial_cmp(&other.path)
 	}
 }
