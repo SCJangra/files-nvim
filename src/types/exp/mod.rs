@@ -302,37 +302,37 @@ impl Explorer {
 // Maps
 impl Explorer {
 	fn map_enter(buf: Buffer) -> SetKeymapOpts {
-		let cb = move |_| Self::get_mut(&buf).and_then(|mut exp| exp.enter());
+		let cb = move |_| Self::get_mut(&buf).and_then(|mut exp| exp.enter()).unwrap_or_default();
 		SetKeymapOpts::builder().callback(cb).build()
 	}
 
 	fn map_next(buf: Buffer) -> SetKeymapOpts {
-		let cb = move |_| Self::get_mut(&buf).and_then(|mut exp| exp.next());
+		let cb = move |_| Self::get_mut(&buf).and_then(|mut exp| exp.next()).unwrap_or_default();
 		SetKeymapOpts::builder().callback(cb).build()
 	}
 
 	fn map_prev(buf: Buffer) -> SetKeymapOpts {
-		let cb = move |_| Self::get_mut(&buf).and_then(|mut exp| exp.prev());
+		let cb = move |_| Self::get_mut(&buf).and_then(|mut exp| exp.prev()).unwrap_or_default();
 		SetKeymapOpts::builder().callback(cb).build()
 	}
 
 	fn map_up(buf: Buffer) -> SetKeymapOpts {
-		let cb = move |_| Self::get_mut(&buf).and_then(|mut exp| exp.up());
+		let cb = move |_| Self::get_mut(&buf).and_then(|mut exp| exp.up()).unwrap_or_default();
 		SetKeymapOpts::builder().callback(cb).build()
 	}
 
 	fn map_quit(buf: Buffer) -> SetKeymapOpts {
-		let cb = move |_| Self::remove(&buf).and_then(|exp| exp.quit());
+		let cb = move |_| Self::remove(&buf).and_then(|exp| exp.quit()).unwrap_or_default();
 		SetKeymapOpts::builder().callback(cb).build()
 	}
 
 	fn map_rename(buf: Buffer) -> SetKeymapOpts {
-		let cb = move |_| Self::get(&buf).and_then(|exp| exp.rename());
+		let cb = move |_| Self::get(&buf).and_then(|exp| exp.rename()).unwrap_or_default();
 		SetKeymapOpts::builder().callback(cb).build()
 	}
 
 	fn map_copy(buf: Buffer) -> SetKeymapOpts {
-		let cb = move |_| Self::get_mut(&buf).and_then(|mut exp| exp.copy());
+		let cb = move |_| Self::get_mut(&buf).and_then(|mut exp| exp.copy()).unwrap_or_default();
 		SetKeymapOpts::builder().callback(cb).build()
 	}
 }
