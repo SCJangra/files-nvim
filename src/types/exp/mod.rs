@@ -101,6 +101,9 @@ impl Explorer {
 		self.buf.set_keymap(Mode::Normal, &maps.copy, "", &Self::map_copy(self.buf))?;
 		self.buf.set_keymap(Mode::Visual, &maps.copy, "", &Self::map_copy(self.buf))?;
 
+		self.buf.set_keymap(Mode::Normal, &maps.cut, "", &Self::map_cut(self.buf))?;
+		self.buf.set_keymap(Mode::Visual, &maps.cut, "", &Self::map_cut(self.buf))?;
+
 		Ok(())
 	}
 
@@ -275,6 +278,26 @@ impl Explorer {
 		Ok(())
 	}
 
+	fn cut(&mut self) -> Result<()> {
+		let mut indices = self.selected_files()?;
+
+		indices.try_for_each(|index| {
+			// PERF: This clone can be optimized.
+			let file = self.files.get(index).cloned().ok_or_else(|| Error::NoFile(index))?;
+
+			self.cb.copy.remove(&file);
+
+			match self.cb.cut.contains(&file) {
+				true => self.cb.cut.remove(&file),
+				false => self.cb.cut.insert(file),
+			};
+
+			Result::Ok(())
+		})?;
+
+		Ok(())
+	}
+
 	#[inline(always)]
 	fn get_mut(buf: &Buffer) -> Result<RefMut<'_, Buffer, Self>> {
 		OPEN_EXPS.get_mut(buf).ok_or_else(|| Error::NoExplorer(*buf))
@@ -330,6 +353,11 @@ impl Explorer {
 
 	fn map_copy(buf: Buffer) -> SetKeymapOpts {
 		let cb = move |_| Self::get_mut(&buf).and_then(|mut exp| exp.copy()).unwrap_or_default();
+		SetKeymapOpts::builder().callback(cb).build()
+	}
+
+	fn map_cut(buf: Buffer) -> SetKeymapOpts {
+		let cb = move |_| Self::get_mut(&buf).and_then(|mut exp| exp.cut()).unwrap_or_default();
 		SetKeymapOpts::builder().callback(cb).build()
 	}
 }
