@@ -120,8 +120,7 @@ impl Explorer {
 			Nav::Noop => (),
 		}
 
-		self.task
-			.spawn_atomic(task::List::new(dir), |res| res.map(|files| Msg::List(files)));
+		self.task.spawn_atomic(task::List::new(dir), |res| res.map(Msg::List));
 
 		Ok(())
 	}

@@ -57,7 +57,7 @@ impl Iterator for Copier {
 			.and_then(|bytes| self.writer.write_all(&self.buf[..bytes]).map(|_| bytes));
 
 		match res {
-			Ok(bytes) if bytes == 0 => None,
+			Ok(0) => None,
 			Ok(bytes) => Some(Ok(bytes)),
 			Err(err) => Some(Err(err.into())),
 		}
