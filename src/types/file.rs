@@ -1,10 +1,11 @@
-use std::ffi::OsStr;
+use std::fs;
 use std::path::PathBuf;
+use std::{ffi::OsStr, path::Path};
 
 use nvim_oxi::api;
 use serde::{Deserialize, Serialize};
 
-use crate::{error::Error, lua_interop, types::Result};
+use crate::{error::Error, lua_interop, task::TaskResult, types::Result};
 
 /// A file.
 #[derive(Clone, PartialEq, Eq)]
@@ -56,6 +57,27 @@ impl File {
 
 	pub(crate) fn name_str(&self) -> Option<&str> {
 		self.name().and_then(|n| n.to_str())
+	}
+
+	pub(crate) fn from_path(path: PathBuf) -> TaskResult<Self> {
+		let meta = fs::metadata(&path)?;
+
+		let ty = if meta.is_file() {
+			FileType::File
+		} else if meta.is_dir() {
+			let child = fs::read_dir(&path)?.next();
+
+			match child {
+				Some(_) => FileType::DirectoryFull,
+				None => FileType::DirectoryEmpty,
+			}
+		} else if meta.is_symlink() {
+			FileType::Symlink
+		} else {
+			FileType::Unknown
+		};
+
+		Ok(Self { path, ty, size: meta.len() })
 	}
 }
 

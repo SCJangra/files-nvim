@@ -97,6 +97,7 @@ impl Explorer {
 		self.buf.set_keymap(mode, &maps.prev, "", &Self::map_prev(self.buf))?;
 		self.buf.set_keymap(mode, &maps.up, "", &Self::map_up(self.buf))?;
 		self.buf.set_keymap(mode, &maps.rename, "", &Self::map_rename(self.buf))?;
+		self.buf.set_keymap(mode, &maps.create, "", &Self::map_create(self.buf))?;
 
 		self.buf.set_keymap(Mode::Normal, &maps.copy, "", &Self::map_copy(self.buf))?;
 		self.buf.set_keymap(Mode::Visual, &maps.copy, "", &Self::map_copy(self.buf))?;
@@ -124,6 +125,31 @@ impl Explorer {
 		}
 
 		self.task.spawn_atomic(task::List::new(dir), |res| res.map(Msg::List));
+
+		Ok(())
+	}
+
+	/// Create a file or directory.
+	fn create(&self) -> Result<()> {
+		let dest = self.nav.current().to_path_buf();
+		let buf = self.buf;
+
+		let on_path_input = nvim::Function::from_fn_once(move |maybe_path: Option<String>| {
+			let Some(path) = maybe_path else { return };
+
+			nvim::schedule(move |_| {
+				let task = task::Create::new(path, dest.clone());
+
+				// This call will deadlock without the above `nvim::schedule` wrap-up.
+				let Ok(mut exp) = Self::get_mut(&buf).map_err(|_| Error::NoExplorer(buf)) else { return };
+				exp.task
+					.spawn_atomic(task, |res| res.map(move |file| Msg::InsertFile(file, dest)));
+			});
+		});
+
+		let opts = InputOpts { prompt: String::from("Name: "), default: String::new() };
+
+		Config::arc_clone().input()?.call((opts, on_path_input))?;
 
 		Ok(())
 	}
@@ -255,6 +281,13 @@ impl Explorer {
 					.set_file_name(new_name);
 				exp.refresh()
 			},
+			Msg::InsertFile(file, dest) => match exp.nav.current() == dest {
+				true => {
+					exp.files.push(file);
+					exp.refresh()
+				},
+				false => Ok(()),
+			},
 		}
 	}
 
@@ -348,6 +381,11 @@ impl Explorer {
 
 	fn map_rename(buf: Buffer) -> SetKeymapOpts {
 		let cb = move |_| Self::get(&buf).and_then(|exp| exp.rename()).unwrap_or_default();
+		SetKeymapOpts::builder().callback(cb).build()
+	}
+
+	fn map_create(buf: Buffer) -> SetKeymapOpts {
+		let cb = move |_| Self::get(&buf).and_then(|exp| exp.create()).unwrap_or_default();
 		SetKeymapOpts::builder().callback(cb).build()
 	}
 

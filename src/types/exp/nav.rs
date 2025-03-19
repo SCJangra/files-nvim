@@ -44,6 +44,11 @@ impl Navigator {
 		self.dirs.get(self.index).and_then(|d| d.parent())
 	}
 
+	pub fn current(&self) -> &Path {
+		// SAFETY: Current directory should always exist.
+		&self.dirs[self.index]
+	}
+
 	/// Go to the previous directory.
 	pub fn go_to_next(&mut self) {
 		let new_index = self.index.saturating_add(1);

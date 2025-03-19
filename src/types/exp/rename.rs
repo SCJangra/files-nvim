@@ -1,6 +1,6 @@
 use nvim_oxi::{self as nvim};
 
-use crate::{msg::Msg, task, types::*};
+use crate::{error::Error, msg::Msg, task, types::*};
 
 impl Explorer {
 	pub(crate) fn rename(&self) -> Result<()> {
@@ -18,7 +18,7 @@ impl Explorer {
 				let task = task::Rename::new(index, file, new_name);
 
 				// This call will deadlock without the above `nvim::schedule` wrap-up.
-				let Ok(mut exp) = Self::get_mut(&buf) else { return };
+				let Ok(mut exp) = Self::get_mut(&buf).map_err(|_| Error::NoExplorer(buf)) else { return };
 				exp.task
 					.spawn_atomic(task, |res| res.map(|r| Msg::Rename(r.file_index, r.new_name)));
 			});

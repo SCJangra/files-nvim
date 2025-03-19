@@ -39,27 +39,7 @@ impl AtomicTask for List {
 			.par_bridge()
 			.take_any_while(|_| !self.is_cancelled())
 			.filter_map(|d| d.ok())
-			.map(|d| {
-				let path = d.path();
-				let meta = fs::metadata(&path)?;
-
-				let ty = if meta.is_file() {
-					FileType::File
-				} else if meta.is_dir() {
-					let child = fs::read_dir(&path)?.next();
-
-					match child {
-						Some(_) => FileType::DirectoryFull,
-						None => FileType::DirectoryEmpty,
-					}
-				} else if meta.is_symlink() {
-					FileType::Symlink
-				} else {
-					FileType::Unknown
-				};
-
-				Ok::<_, io::Error>(File { path, ty, size: meta.len() })
-			})
+			.map(|d| File::from_path(d.path()))
 			.filter_map(|res| res.ok())
 			.collect();
 
