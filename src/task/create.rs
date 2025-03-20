@@ -41,7 +41,7 @@ impl AtomicTask for Create {
 
 			match (index == last, create_dir) {
 				(true, true) | (false, _) => fs::create_dir(dest.as_path()),
-				(true, false) => fs::write(dest.as_path(), ""),
+				(true, false) => fs::File::create_new(dest.as_path()).map(|_| ()),
 			}
 		})?;
 
