@@ -1,6 +1,6 @@
+use std::ffi::OsStr;
 use std::fs;
 use std::path::PathBuf;
-use std::{ffi::OsStr, path::Path};
 
 use nvim_oxi::api;
 use serde::{Deserialize, Serialize};
@@ -8,14 +8,14 @@ use serde::{Deserialize, Serialize};
 use crate::{error::Error, lua_interop, task::TaskResult, types::Result};
 
 /// A file.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct File {
 	pub path: PathBuf,
 	pub ty: FileType,
 	pub size: u64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FileType {
 	File,
 	DirectoryEmpty,
@@ -24,7 +24,7 @@ pub enum FileType {
 	Unknown,
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Field {
 	Size,
@@ -79,6 +79,46 @@ impl File {
 
 		Ok(Self { path, ty, size: meta.len() })
 	}
+
+	// TODO: take a `Path` instead of `&str`
+	pub(crate) fn touch_new(path: &str, mut dest: PathBuf) -> TaskResult<(PathBuf, fs::File)> {
+		let path = path.trim();
+		let parts = path.split_terminator('/').collect::<Vec<_>>();
+		// SAFETY: `parts` cannot be empty here, so this won't panic.
+		let last = parts.len() - 1;
+		let create_dir = path.ends_with("/");
+
+		let mut index = 0;
+		let file = loop {
+			let name = parts[index];
+
+			dest.push(name);
+
+			match (index == last, create_dir) {
+				(true, true) | (false, _) => {
+					let res = fs::create_dir(dest.as_path());
+
+					match res {
+						Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => Ok(()),
+						Err(err) => Err(err),
+						Ok(v) => Ok(v),
+					}?
+				},
+				(true, false) => break fs::File::create_new(dest.as_path())?,
+			};
+
+			index += 1
+		};
+
+		Ok((dest, file))
+	}
+
+	// TODO: take a `Path` instead of `&str`
+	pub(crate) fn create_new(path: &str, dest: PathBuf) -> TaskResult<Self> {
+		let (path, _) = Self::touch_new(path, dest)?;
+		let file = Self::from_path(path)?;
+		Ok(file)
+	}
 }
 
 impl Ord for File {
@@ -89,6 +129,6 @@ impl Ord for File {
 
 impl PartialOrd for File {
 	fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-		self.path.partial_cmp(&other.path)
+		Some(self.cmp(other))
 	}
 }

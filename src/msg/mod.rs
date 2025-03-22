@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use crate::{error::TaskError, types::File};
 
@@ -8,6 +8,5 @@ pub(crate) enum Msg {
 	TaskError(usize, TaskError),
 	Rename(usize, String),
 	InsertFile(File, PathBuf),
+	FileUpdated(Arc<PathBuf>),
 }
-
-pub(crate) type MsgResult = Result<Msg, TaskError>;

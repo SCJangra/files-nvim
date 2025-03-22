@@ -8,7 +8,7 @@ use crossbeam_channel::Sender;
 use nvim_oxi::libuv::AsyncHandle;
 
 use crate::{
-	msg::{Msg, MsgResult},
+	msg::Msg,
 	traits::{AtomicTask, IterExt, Task, TaskHandle},
 };
 
@@ -19,44 +19,53 @@ pub(crate) struct TaskManager {
 	tasks: BTreeMap<usize, ArcTaskHandle>,
 	unique_tasks: BTreeMap<TypeId, ArcTaskHandle>,
 	handle: AsyncHandle,
-	msg: Sender<MsgResult>,
+	msg: Sender<Msg>,
 }
 
 impl TaskManager {
-	pub(crate) fn new(handle: AsyncHandle, msg: Sender<MsgResult>) -> Self {
+	pub(crate) fn new(handle: AsyncHandle, msg: Sender<Msg>) -> Self {
 		Self { index: 0, tasks: BTreeMap::new(), unique_tasks: BTreeMap::new(), handle, msg }
 	}
 
 	pub(crate) fn spawn<T, M>(&mut self, task: T, msg: M)
 	where
 		T: Task + TaskHandle + Any + Send + Sync + 'static,
-		M: Fn(Option<T::Progress>) + Send + Sync + 'static,
+		M: Fn(T::Update) -> Msg + Send + Sync + 'static,
 	{
 		let task = Arc::new(task);
 		let index = self.add_task(task.clone() as ArcTaskHandle);
-		let done = self.msg.clone();
+		let message = self.msg.clone();
+		let handle = self.handle.clone();
 
 		rayon::spawn(move || {
 			let iter = match task.execute() {
 				Ok(iter) => iter,
 				Err(err) => {
-					done.send(Ok(Msg::TaskError(index, err))).ok();
+					message.send(Msg::TaskError(index, err)).ok();
+					handle.send().ok();
 					return;
 				},
 			};
 
-			iter.for_each_interval(task.update_interval(), |p| msg(Some(p)));
+			iter.for_each_interval(task.update_interval(), |u| {
+				let m = match u {
+					Ok(u) => msg(u),
+					Err(err) => Msg::TaskError(index, err),
+				};
 
-			msg(None);
+				message.send(m).ok();
+				handle.send().ok();
+			});
 
-			done.send(Ok(Msg::TaskDone(index))).ok();
+			message.send(Msg::TaskDone(index)).ok();
+			handle.send().ok();
 		});
 	}
 
 	pub(crate) fn spawn_atomic<T, M>(&mut self, task: T, msg: M)
 	where
 		T: AtomicTask + TaskHandle + Any + Send + Sync + 'static,
-		M: FnOnce(T::Response) -> MsgResult + Send + Sync + 'static,
+		M: FnOnce(T::Response) -> Msg + Send + Sync + 'static,
 	{
 		let task = Arc::new(task);
 		let index = self.add_task(task.clone() as ArcTaskHandle);
@@ -64,10 +73,19 @@ impl TaskManager {
 		let handle = self.handle.clone();
 
 		rayon::spawn(move || {
-			let res = task.execute();
+			let res = match task.execute() {
+				Ok(res) => res,
+				Err(err) => {
+					msg_sender.send(Msg::TaskError(index, err)).ok();
+					msg_sender.send(Msg::TaskDone(index)).ok();
+					handle.send().ok();
+					return;
+				},
+			};
+
 			let res = msg(res);
 			msg_sender.send(res).ok();
-			msg_sender.send(Ok(Msg::TaskDone(index))).ok();
+			msg_sender.send(Msg::TaskDone(index)).ok();
 			handle.send().ok();
 		});
 	}

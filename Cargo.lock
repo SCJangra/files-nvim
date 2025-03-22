@@ -92,6 +92,7 @@ dependencies = [
  "serde",
  "thiserror",
  "tree_magic_mini",
+ "unwrap_or",
 ]
 
 [[package]]
@@ -434,6 +435,12 @@ name = "unicode-ident"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a5f39404a5da50712a4c1eecf25e90dd62b613502b7e925fd4e4d19b5c96512"
+
+[[package]]
+name = "unwrap_or"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f2fe1f049979528ce97d8a4672f984f8846fc9975be0cf14ca798116d724c4a"
 
 [[package]]
 name = "windows-targets"

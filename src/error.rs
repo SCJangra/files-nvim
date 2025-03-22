@@ -1,5 +1,6 @@
-use std::{fmt, io};
+use std::{fmt, io, path::StripPrefixError};
 
+use crossbeam_channel::RecvError;
 use nvim_oxi::{self as nvim, api::Buffer};
 
 use crate::traits::LogErr;
@@ -50,6 +51,18 @@ pub enum TaskError {
 
 	#[error("Cancelled")]
 	Cancelled,
+
+	#[error("StripPrefix({0})")]
+	StripPrefix(#[from] StripPrefixError),
+
+	#[error("NotUtf8Path")]
+	NotUtf8Path,
+
+	#[error("NotUtf8FileNme")]
+	NotUtf8FileNme,
+
+	#[error("Recv({0})")]
+	Recv(#[from] RecvError),
 }
 
 impl From<nvim::api::Error> for Error {

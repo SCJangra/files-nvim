@@ -1,5 +1,5 @@
 use std::{
-	fs, io,
+	fs,
 	path::PathBuf,
 	sync::atomic::{self, AtomicBool},
 };
@@ -9,8 +9,10 @@ use rayon::iter::{ParallelBridge, ParallelIterator};
 use crate::{
 	error::TaskError,
 	traits::{AtomicTask, TaskHandle},
-	types::{File, FileType},
+	types::File,
 };
+
+use super::TaskResult;
 
 pub(crate) struct List {
 	/// The directory to list.
@@ -26,9 +28,9 @@ impl List {
 }
 
 impl AtomicTask for List {
-	type Response = Result<Vec<File>, TaskError>;
+	type Response = Vec<File>;
 
-	fn execute(&self) -> Self::Response {
+	fn execute(&self) -> TaskResult<Self::Response> {
 		if self.is_cancelled() {
 			return Err(TaskError::Cancelled);
 		}

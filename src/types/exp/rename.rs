@@ -19,8 +19,7 @@ impl Explorer {
 
 				// This call will deadlock without the above `nvim::schedule` wrap-up.
 				let Ok(mut exp) = Self::get_mut(&buf).map_err(|_| Error::NoExplorer(buf)) else { return };
-				exp.task
-					.spawn_atomic(task, |res| res.map(|r| Msg::Rename(r.file_index, r.new_name)));
+				exp.task.spawn_atomic(task, |r| Msg::Rename(r.file_index, r.new_name));
 			});
 			Ok(())
 		});

@@ -2,48 +2,49 @@ use std::{
 	fs,
 	io::{BufReader, BufWriter, Read, Write},
 	path::PathBuf,
-	ptr,
-	sync::atomic::{AtomicBool, AtomicPtr, Ordering},
+	sync::{
+		atomic::{AtomicBool, AtomicPtr, Ordering},
+		Arc,
+	},
 	time::Duration,
 };
+use unwrap_or::*;
 
-use crate::traits::{Task, TaskHandle};
+use crate::{
+	error::TaskError,
+	traits::{Task, TaskHandle},
+	types::{File, Progress},
+};
 
-use super::TaskResult;
+use super::{dfs::Dfs, TaskResult};
 
 pub struct Copy {
-	canceled: AtomicBool,
-	file: PathBuf,
+	files: Vec<File>,
 	dest: PathBuf,
-	progress: AtomicPtr<Progress>,
+	canceled: AtomicBool,
+	progress: Arc<CopyProgress>,
 	update_interval: Duration,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct Progress {
-	size: u64,
-	done: u64,
+pub struct CopyProgress {
+	files: Progress,
+	bytes: Progress,
+	current_file: AtomicPtr<String>,
+	current: Progress,
 }
 
 pub struct Copier {
-	file: PathBuf,
-	dest: PathBuf,
 	buf: Vec<u8>,
 	reader: BufReader<fs::File>,
 	writer: BufWriter<fs::File>,
 }
 
 impl Copier {
-	pub fn new(file: PathBuf, mut dest: PathBuf) -> TaskResult<Self> {
-		dest.push(file.file_name().unwrap_or_default());
-
-		let from = fs::File::open(file.as_path())?;
-		let to = fs::OpenOptions::new().write(true).truncate(true).open(dest.as_path())?;
-
+	pub fn new(from: fs::File, to: fs::File) -> Self {
 		let reader = BufReader::new(from);
 		let writer = BufWriter::new(to);
 
-		Ok(Self { file, dest, buf: Vec::with_capacity(5_000_000), reader, writer })
+		Self { buf: vec![0; 5_000_000], reader, writer }
 	}
 }
 
@@ -65,38 +66,94 @@ impl Iterator for Copier {
 }
 
 impl Copy {
-	pub fn new(file: PathBuf, dest: PathBuf) -> Self {
+	pub fn new(files: Vec<File>, dest: PathBuf) -> Self {
 		Self {
-			file,
+			files,
 			dest,
 			canceled: AtomicBool::new(false),
-			progress: AtomicPtr::new(ptr::null_mut()),
+			progress: Arc::new(CopyProgress {
+				files: Progress::default(),
+				bytes: Progress::default(),
+				current_file: AtomicPtr::new(&mut String::new()),
+				current: Progress::default(),
+			}),
+			// TODO Get this from the config.
 			update_interval: Duration::from_millis(500),
 		}
 	}
 }
 
 impl Task for Copy {
-	type Progress = TaskResult<Progress>;
+	type Update = Arc<PathBuf>;
 
-	fn execute(&self) -> TaskResult<impl Iterator<Item = Self::Progress>> {
-		let meta = fs::metadata(self.file.as_path())?;
+	fn execute(&self) -> TaskResult<impl Iterator<Item = TaskResult<Self::Update>>> {
+		let (sender, receiver) = crossbeam_channel::unbounded();
 
-		let mut prog = Progress { size: meta.len(), done: 0 };
+		let progress = Arc::clone(&self.progress);
+		let files = self.files.clone();
 
-		let iter = Copier::new(self.file.clone(), self.dest.clone())?
-			.take_while(|_| !self.is_cancelled())
-			.map(move |res| {
-				let bytes = res?;
-
-				prog.done += bytes as u64;
-
-				self.progress.store(&mut prog, Ordering::Release);
-
-				Ok(prog)
+		rayon::spawn(move || {
+			Dfs::new(files).filter_map(|file| file.ok()).for_each(|file| {
+				progress.files.total.fetch_add(1, Ordering::Release);
+				progress.bytes.total.fetch_add(file.size, Ordering::Release);
 			});
+		});
 
-		Ok(iter)
+		let progress = Arc::clone(&self.progress);
+		let files = self.files.clone();
+		let dest = self.dest.clone();
+
+		let copier = |prefix: &PathBuf, file, dest| {
+			let file: File = file?;
+			let copy_path = file.path.strip_prefix(prefix.as_path())?;
+			let name = copy_path
+				.file_name()
+				.and_then(|name| name.to_str())
+				.ok_or(TaskError::NotUtf8FileNme)?
+				.to_string();
+			let size = file.size;
+			let copy_path = copy_path.to_str().ok_or(TaskError::NotUtf8Path)?;
+			let from = fs::File::open(&file.path)?;
+			let (file, to) = File::touch_new(copy_path, dest)?;
+
+			Ok((file, name, size, Copier::new(from, to)))
+		};
+
+		let copy_file = move |prefix, file| {
+			for file in Dfs::new(vec![file]).filter(|file| file.as_ref().map(|file| !file.is_dir()).unwrap_or(true)) {
+				let copier = copier(&prefix, file, dest.clone());
+				let (file, mut name, size, copier) = unwrap_ok_or!(copier, err, {
+					sender.send(Err(err)).ok();
+					continue;
+				});
+
+				progress.current_file.store(&mut name, Ordering::Release);
+				progress.current.total.store(size, Ordering::Release);
+				progress.current.done.store(0, Ordering::Release);
+
+				let file = Arc::new(file);
+
+				for bytes in copier {
+					let bytes = unwrap_ok_or!(bytes, err, {
+						sender.send(Err(err)).ok();
+						continue;
+					});
+
+					progress.current.done.fetch_add(bytes as u64, Ordering::Release);
+
+					sender.send(Ok(Arc::clone(&file))).ok();
+				}
+			}
+		};
+
+		rayon::spawn(move || {
+			files.into_iter().for_each(|file| {
+				let prefix = file.path.parent().map(|p| p.to_path_buf()).unwrap_or_default();
+				copy_file(prefix, file);
+			})
+		});
+
+		Ok(receiver.into_iter())
 	}
 
 	fn update_interval(&self) -> Duration {

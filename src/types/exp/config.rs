@@ -20,6 +20,7 @@ pub struct ExplorerKeymaps {
 	pub rename: String,
 	pub copy: String,
 	pub cut: String,
+	pub paste: String,
 	pub create: String,
 }
 

@@ -13,10 +13,10 @@ pub trait WithModifiable {
 }
 
 pub trait Task {
-	type Progress;
+	type Update;
 
 	/// Execute this task.
-	fn execute(&self) -> TaskResult<impl Iterator<Item = Self::Progress>>;
+	fn execute(&self) -> TaskResult<impl Iterator<Item = TaskResult<Self::Update>>>;
 
 	fn update_interval(&self) -> Duration;
 }
@@ -26,7 +26,7 @@ pub trait AtomicTask {
 	type Response;
 
 	/// Execute this task.
-	fn execute(&self) -> Self::Response;
+	fn execute(&self) -> TaskResult<Self::Response>;
 }
 
 pub trait TaskHandle {

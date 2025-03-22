@@ -7,7 +7,12 @@ pub use config::*;
 use nav::*;
 use rayon::slice::ParallelSliceMut;
 
-use std::{fmt::Write, ops::RangeInclusive, path::PathBuf, sync::LazyLock};
+use std::{
+	fmt::Write,
+	ops::RangeInclusive,
+	path::{Path, PathBuf},
+	sync::LazyLock,
+};
 
 use dashmap::{
 	mapref::one::{Ref, RefMut},
@@ -98,6 +103,7 @@ impl Explorer {
 		self.buf.set_keymap(mode, &maps.up, "", &Self::map_up(self.buf))?;
 		self.buf.set_keymap(mode, &maps.rename, "", &Self::map_rename(self.buf))?;
 		self.buf.set_keymap(mode, &maps.create, "", &Self::map_create(self.buf))?;
+		self.buf.set_keymap(mode, &maps.paste, "", &Self::map_paste(self.buf))?;
 
 		self.buf.set_keymap(Mode::Normal, &maps.copy, "", &Self::map_copy(self.buf))?;
 		self.buf.set_keymap(Mode::Visual, &maps.copy, "", &Self::map_copy(self.buf))?;
@@ -124,7 +130,7 @@ impl Explorer {
 			Nav::Noop => (),
 		}
 
-		self.task.spawn_atomic(task::List::new(dir), |res| res.map(Msg::List));
+		self.task.spawn_atomic(task::List::new(dir), Msg::List);
 
 		Ok(())
 	}
@@ -142,8 +148,7 @@ impl Explorer {
 
 				// This call will deadlock without the above `nvim::schedule` wrap-up.
 				let Ok(mut exp) = Self::get_mut(&buf).map_err(|_| Error::NoExplorer(buf)) else { return };
-				exp.task
-					.spawn_atomic(task, |res| res.map(move |file| Msg::InsertFile(file, dest)));
+				exp.task.spawn_atomic(task, |file| Msg::InsertFile(file, dest));
 			});
 		});
 
@@ -228,11 +233,9 @@ impl Explorer {
 
 		win.set_buf(&buf)?;
 
-		let (msg_sender, msg_receiver) = crossbeam_channel::unbounded::<MsgResult>();
+		let (msg_sender, msg_receiver) = crossbeam_channel::unbounded::<Msg>();
 		let handle = AsyncHandle::new(move || {
 			while let Ok(msg) = msg_receiver.try_recv() {
-				// The map is so that the error is logged when it is dropped.
-				let Ok(msg) = msg.map_err(Error::from) else { continue };
 				nvim::schedule(move |_| Self::update(buf, msg).unwrap_or_default());
 			}
 
@@ -269,10 +272,7 @@ impl Explorer {
 				exp.task.remove_task(index);
 				Ok(())
 			},
-			Msg::TaskError(index, err) => {
-				exp.task.remove_task(index);
-				Err(err.into())
-			},
+			Msg::TaskError(_, err) => Err(err.into()),
 			Msg::Rename(file_index, new_name) => {
 				exp.files
 					.get_mut(file_index)
@@ -287,6 +287,10 @@ impl Explorer {
 					exp.refresh()
 				},
 				false => Ok(()),
+			},
+			Msg::FileUpdated(file) => {
+				nvim::print!("{file:?}");
+				Ok(())
 			},
 		}
 	}
@@ -327,6 +331,18 @@ impl Explorer {
 
 			Result::Ok(())
 		})?;
+
+		Ok(())
+	}
+
+	pub fn paste(&mut self) -> Result<()> {
+		let files = self.cb.copy.iter().cloned().collect::<Vec<_>>();
+
+		self.cb.copy = Default::default();
+
+		let task = task::Copy::new(files, self.current_dir().to_path_buf());
+
+		self.task.spawn(task, Msg::FileUpdated);
 
 		Ok(())
 	}
@@ -398,6 +414,11 @@ impl Explorer {
 		let cb = move |_| Self::get_mut(&buf).and_then(|mut exp| exp.cut()).unwrap_or_default();
 		SetKeymapOpts::builder().callback(cb).build()
 	}
+
+	fn map_paste(buf: Buffer) -> SetKeymapOpts {
+		let cb = move |_| Self::get_mut(&buf).and_then(|mut exp| exp.paste()).unwrap_or_default();
+		SetKeymapOpts::builder().callback(cb).build()
+	}
 }
 
 // Navigation
@@ -438,6 +459,10 @@ impl Explorer {
 		let index = win.get_cursor()?.0.saturating_sub(1);
 
 		Ok(index)
+	}
+
+	fn current_dir(&self) -> &Path {
+		self.nav.current()
 	}
 
 	/// Open the file or enter the directory under cursor.

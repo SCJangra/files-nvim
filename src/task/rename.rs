@@ -33,9 +33,9 @@ impl Rename {
 }
 
 impl AtomicTask for Rename {
-	type Response = TaskResult<RenameResponse>;
+	type Response = RenameResponse;
 
-	fn execute(&self) -> Self::Response {
+	fn execute(&self) -> TaskResult<Self::Response> {
 		let from = self.file.as_path();
 		let mut to = self.file.clone();
 		to.set_file_name(&self.new_name);
