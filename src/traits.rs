@@ -48,14 +48,17 @@ pub trait IterExt: Iterator + Sized {
 	{
 		let mut time = Instant::now();
 
-		self.for_each(|item| {
-			if time.elapsed() < interval {
-				return;
+		let mut iter = self.peekable();
+
+		loop {
+			let Some(item) = iter.next() else { break };
+
+			if time.elapsed() < interval && iter.peek().is_some() {
+				continue;
 			}
 
 			func(item);
-
 			time = Instant::now();
-		});
+		}
 	}
 }
