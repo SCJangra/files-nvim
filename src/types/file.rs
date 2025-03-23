@@ -80,34 +80,30 @@ impl File {
 		Ok(Self { path, ty, size: meta.len() })
 	}
 
-	pub(crate) fn touch_new(path: &str, mut dest: PathBuf) -> TaskResult<(PathBuf, fs::File)> {
-		let path = path.trim();
-		let parts = path.split_terminator('/').collect::<Vec<_>>();
-		// SAFETY: `parts` cannot be empty here, so this won't panic.
-		let last = parts.len() - 1;
-		let create_dir = path.ends_with("/");
+	pub(crate) fn create_dir(path: &str, mut dest: PathBuf) -> TaskResult<PathBuf> {
+		let path = path.trim_start_matches('/').trim_end_matches('/');
 
-		let mut index = 0;
-		let file = loop {
-			let name = parts[index];
+		dest.push(path);
+		let res = fs::create_dir_all(&dest);
 
-			dest.push(name);
+		match res {
+			Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => Ok(dest),
+			Err(err) => Err(err.into()),
+			Ok(_) => Ok(dest),
+		}
+	}
 
-			match (index == last, create_dir) {
-				(true, true) | (false, _) => {
-					let res = fs::create_dir(dest.as_path());
+	pub(crate) fn create_file(path: &str, mut dest: PathBuf) -> TaskResult<(PathBuf, fs::File)> {
+		let path = path.trim_start_matches('/').trim_end_matches('/');
+		let (dir_path, file_name) = path.rsplit_once('/').unwrap_or(("", path));
 
-					match res {
-						Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => Ok(()),
-						Err(err) => Err(err),
-						Ok(v) => Ok(v),
-					}?
-				},
-				(true, false) => break fs::File::create_new(dest.as_path())?,
-			};
+		if !dir_path.is_empty() {
+			dest = Self::create_dir(dir_path, dest)?;
+		}
 
-			index += 1
-		};
+		dest.push(file_name);
+
+		let file = fs::File::create_new(&dest)?;
 
 		Ok((dest, file))
 	}
@@ -122,5 +118,43 @@ impl Ord for File {
 impl PartialOrd for File {
 	fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
 		Some(self.cmp(other))
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use assertables::*;
+	use tempfile::tempdir;
+
+	use super::*;
+
+	#[test]
+	fn create_dir() {
+		let root = assert_ok!(tempdir());
+		let root = root.path();
+
+		let path_bad = "///a/b////c///";
+		let path_good = "a/b/c";
+
+		let path = assert_ok!(File::create_dir(path_bad, root.to_path_buf()));
+
+		assert_eq!(path, root.join(path_good));
+		assert!(path.exists());
+		assert!(path.is_dir());
+	}
+
+	#[test]
+	fn create_file() {
+		let root = assert_ok!(tempdir());
+		let root = root.path();
+
+		let path_bad = "///a/b////c///";
+		let path_good = "a/b/c";
+
+		let (path, _) = assert_ok!(File::create_file(path_bad, root.to_path_buf()));
+
+		assert_eq!(path, root.join(path_good));
+		assert!(path.exists());
+		assert!(path.is_file());
 	}
 }

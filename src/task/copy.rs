@@ -114,7 +114,7 @@ impl Task for Copy {
 			let size = file.size;
 			let copy_path = copy_path.to_str().ok_or(TaskError::NotUtf8Path)?;
 			let from = fs::File::open(&file.path)?;
-			let (file, to) = File::touch_new(copy_path, dest)?;
+			let (file, to) = File::create_file(copy_path, dest)?;
 
 			Ok((file, name, size, Copier::new(from, to)))
 		};

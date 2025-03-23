@@ -26,7 +26,10 @@ impl AtomicTask for Create {
 	type Response = ();
 
 	fn execute(&self) -> TaskResult<Self::Response> {
-		File::touch_new(&self.path, self.dest.clone()).map(|_| ())
+		match self.path.ends_with('/') {
+			true => File::create_dir(&self.path, self.dest.clone()).map(|_| ()),
+			false => File::create_file(&self.path, self.dest.clone()).map(|_| ()),
+		}
 	}
 }
 

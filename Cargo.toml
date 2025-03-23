@@ -36,3 +36,7 @@ unwrap_or = "1"
 
 nvim-oxi = { git = "https://github.com/SCJangra/nvim-oxi.git", branch = "main", features = ["neovim-0-10", "libuv"] }
 serde = { version = "1", features = ["derive"] }
+
+[dev-dependencies]
+assertables = "9"
+tempfile = "3"
