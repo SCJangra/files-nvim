@@ -294,14 +294,13 @@ impl Explorer {
 		let mut indices = self.selected_files()?;
 
 		indices.try_for_each(|index| {
-			// PERF: This clone can be optimized.
-			let file = self.files.get(index).cloned().ok_or_else(|| Error::NoFile(index))?;
+			let file = self.files.get(index).ok_or_else(|| Error::NoFile(index))?;
 
-			self.cb.cut.remove(&file);
+			self.cb.cut.remove(file);
 
-			match self.cb.copy.contains(&file) {
-				true => self.cb.copy.remove(&file),
-				false => self.cb.copy.insert(file),
+			match self.cb.copy.contains(file) {
+				true => self.cb.copy.remove(file),
+				false => self.cb.copy.insert(file.clone()),
 			};
 
 			Result::Ok(())
@@ -314,14 +313,13 @@ impl Explorer {
 		let mut indices = self.selected_files()?;
 
 		indices.try_for_each(|index| {
-			// PERF: This clone can be optimized.
-			let file = self.files.get(index).cloned().ok_or_else(|| Error::NoFile(index))?;
+			let file = self.files.get(index).ok_or_else(|| Error::NoFile(index))?;
 
-			self.cb.copy.remove(&file);
+			self.cb.copy.remove(file);
 
-			match self.cb.cut.contains(&file) {
-				true => self.cb.cut.remove(&file),
-				false => self.cb.cut.insert(file),
+			match self.cb.cut.contains(file) {
+				true => self.cb.cut.remove(file),
+				false => self.cb.cut.insert(file.clone()),
 			};
 
 			Result::Ok(())
