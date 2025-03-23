@@ -40,8 +40,8 @@ impl TaskManager {
 		rayon::spawn(move || {
 			let iter = match task.execute() {
 				Ok(iter) => iter,
-				Err(err) => {
-					message.send(Msg::TaskError(index, err)).ok();
+				Err(error) => {
+					message.send(Msg::TaskError { index, error }).ok();
 					handle.send().ok();
 					return;
 				},
@@ -50,14 +50,14 @@ impl TaskManager {
 			iter.for_each_interval(task.update_interval(), |u| {
 				let m = match u {
 					Ok(u) => msg(u),
-					Err(err) => Msg::TaskError(index, err),
+					Err(error) => Msg::TaskError { index, error },
 				};
 
 				message.send(m).ok();
 				handle.send().ok();
 			});
 
-			message.send(Msg::TaskDone(index)).ok();
+			message.send(Msg::TaskDone { index }).ok();
 			handle.send().ok();
 		});
 	}
@@ -75,9 +75,9 @@ impl TaskManager {
 		rayon::spawn(move || {
 			let res = match task.execute() {
 				Ok(res) => res,
-				Err(err) => {
-					msg_sender.send(Msg::TaskError(index, err)).ok();
-					msg_sender.send(Msg::TaskDone(index)).ok();
+				Err(error) => {
+					msg_sender.send(Msg::TaskError { index, error }).ok();
+					msg_sender.send(Msg::TaskDone { index }).ok();
 					handle.send().ok();
 					return;
 				},
@@ -85,7 +85,7 @@ impl TaskManager {
 
 			let res = msg(res);
 			msg_sender.send(res).ok();
-			msg_sender.send(Msg::TaskDone(index)).ok();
+			msg_sender.send(Msg::TaskDone { index }).ok();
 			handle.send().ok();
 		});
 	}

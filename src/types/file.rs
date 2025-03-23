@@ -80,7 +80,6 @@ impl File {
 		Ok(Self { path, ty, size: meta.len() })
 	}
 
-	// TODO: take a `Path` instead of `&str`
 	pub(crate) fn touch_new(path: &str, mut dest: PathBuf) -> TaskResult<(PathBuf, fs::File)> {
 		let path = path.trim();
 		let parts = path.split_terminator('/').collect::<Vec<_>>();
@@ -111,13 +110,6 @@ impl File {
 		};
 
 		Ok((dest, file))
-	}
-
-	// TODO: take a `Path` instead of `&str`
-	pub(crate) fn create_new(path: &str, dest: PathBuf) -> TaskResult<Self> {
-		let (path, _) = Self::touch_new(path, dest)?;
-		let file = Self::from_path(path)?;
-		Ok(file)
 	}
 }
 

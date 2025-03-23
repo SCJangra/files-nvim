@@ -11,29 +11,20 @@ use crate::{
 pub(crate) struct Rename {
 	/// Indicates whether the rename operation has been canceled.
 	canceled: AtomicBool,
-	/// Index of the file in the explorer.
-	file_index: usize,
 	/// The file to rename.
 	file: PathBuf,
 	/// The new name for the file.
 	new_name: String,
 }
 
-pub(crate) struct RenameResponse {
-	/// Index of the file in the explorer.
-	pub file_index: usize,
-	/// The new name for the file.
-	pub new_name: String,
-}
-
 impl Rename {
-	pub fn new(file_index: usize, file: PathBuf, new_name: String) -> Self {
-		Self { file_index, file, new_name, canceled: AtomicBool::new(false) }
+	pub fn new(file: PathBuf, new_name: String) -> Self {
+		Self { file, new_name, canceled: AtomicBool::new(false) }
 	}
 }
 
 impl AtomicTask for Rename {
-	type Response = RenameResponse;
+	type Response = ();
 
 	fn execute(&self) -> TaskResult<Self::Response> {
 		let from = self.file.as_path();
@@ -42,7 +33,7 @@ impl AtomicTask for Rename {
 
 		std::fs::rename(from, to)?;
 
-		Ok(RenameResponse { file_index: self.file_index, new_name: self.new_name.clone() })
+		Ok(())
 	}
 }
 

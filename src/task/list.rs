@@ -28,7 +28,7 @@ impl List {
 }
 
 impl AtomicTask for List {
-	type Response = Vec<File>;
+	type Response = (PathBuf, Vec<File>);
 
 	fn execute(&self) -> TaskResult<Self::Response> {
 		if self.is_cancelled() {
@@ -47,7 +47,7 @@ impl AtomicTask for List {
 
 		match self.is_cancelled() {
 			true => Err(TaskError::Cancelled),
-			false => Ok(files),
+			false => Ok((self.dir.clone(), files)),
 		}
 	}
 }

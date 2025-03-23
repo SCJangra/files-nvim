@@ -130,14 +130,15 @@ impl Explorer {
 			Nav::Noop => (),
 		}
 
-		self.task.spawn_atomic(task::List::new(dir), Msg::List);
+		self.task
+			.spawn_atomic(task::List::new(dir), |(dir, files)| Msg::List { dir, files });
 
 		Ok(())
 	}
 
 	/// Create a file or directory.
 	fn create(&self) -> Result<()> {
-		let dest = self.nav.current().to_path_buf();
+		let dest = self.nav.current_dir().to_path_buf();
 		let buf = self.buf;
 
 		let on_path_input = nvim::Function::from_fn_once(move |maybe_path: Option<String>| {
@@ -148,7 +149,7 @@ impl Explorer {
 
 				// This call will deadlock without the above `nvim::schedule` wrap-up.
 				let Ok(mut exp) = Self::get_mut(&buf).map_err(|_| Error::NoExplorer(buf)) else { return };
-				exp.task.spawn_atomic(task, |file| Msg::InsertFile(file, dest));
+				exp.task.spawn_atomic(task, |_| Msg::DirUpdated { dir: dest });
 			});
 		});
 
@@ -264,34 +265,27 @@ impl Explorer {
 		let mut exp = Self::get_mut(&buf)?;
 
 		match msg {
-			Msg::List(files) => {
-				exp.files = files;
-				exp.refresh()
+			Msg::List { dir, files } => {
+				if dir == exp.current_dir() {
+					exp.files = files;
+					exp.refresh()?;
+				}
+
+				Ok(())
 			},
-			Msg::TaskDone(index) => {
+			Msg::TaskDone { index } => {
 				exp.task.remove_task(index);
 				Ok(())
 			},
-			Msg::TaskError(_, err) => Err(err.into()),
-			Msg::Rename(file_index, new_name) => {
-				exp.files
-					.get_mut(file_index)
-					.ok_or_else(|| Error::NoFile(file_index))?
-					.path
-					.set_file_name(new_name);
-				exp.refresh()
-			},
-			Msg::InsertFile(file, dest) => match exp.nav.current() == dest {
-				true => {
-					exp.files.push(file);
-					exp.refresh()
-				},
-				false => Ok(()),
-			},
-			Msg::FileUpdated(file) => {
-				nvim::print!("{file:?}");
+			Msg::TaskError { error, .. } => Err(error.into()),
+			Msg::DirUpdated { dir } => {
+				if dir == exp.nav.current_dir() {
+					exp.list(dir, Nav::Noop)?;
+				}
+
 				Ok(())
 			},
+			Msg::Noop => Ok((/* Do nothing */)),
 		}
 	}
 
@@ -340,9 +334,12 @@ impl Explorer {
 
 		self.cb.copy = Default::default();
 
-		let task = task::Copy::new(files, self.current_dir().to_path_buf());
+		let task = task::Copy::new(files, self.nav.current_dir().to_path_buf());
 
-		self.task.spawn(task, Msg::FileUpdated);
+		self.task.spawn(task, |file| match file.parent().map(|p| p.to_path_buf()) {
+			Some(dir) => Msg::DirUpdated { dir },
+			None => Msg::Noop,
+		});
 
 		Ok(())
 	}
@@ -462,7 +459,7 @@ impl Explorer {
 	}
 
 	fn current_dir(&self) -> &Path {
-		self.nav.current()
+		self.nav.current_dir()
 	}
 
 	/// Open the file or enter the directory under cursor.

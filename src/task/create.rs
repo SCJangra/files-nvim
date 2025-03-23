@@ -23,10 +23,10 @@ impl Create {
 }
 
 impl AtomicTask for Create {
-	type Response = File;
+	type Response = ();
 
 	fn execute(&self) -> TaskResult<Self::Response> {
-		File::create_new(&self.path, self.dest.clone())
+		File::touch_new(&self.path, self.dest.clone()).map(|_| ())
 	}
 }
 

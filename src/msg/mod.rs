@@ -1,12 +1,28 @@
-use std::{path::PathBuf, sync::Arc};
+use std::path::PathBuf;
 
 use crate::{error::TaskError, types::File};
 
 pub(crate) enum Msg {
-	List(Vec<File>),
-	TaskDone(usize),
-	TaskError(usize, TaskError),
-	Rename(usize, String),
-	InsertFile(File, PathBuf),
-	FileUpdated(Arc<PathBuf>),
+	/// List files in the explorer.
+	List {
+		/// Which directory to list in. The files will be listed only if the explorer is currently
+		/// showing this directory.
+		dir: PathBuf,
+		/// The files to list
+		files: Vec<File>,
+	},
+	/// A task is completed
+	TaskDone {
+		index: usize,
+	},
+	/// A task has produced an error.
+	TaskError {
+		index: usize,
+		error: TaskError,
+	},
+	/// A directory is updated
+	DirUpdated {
+		dir: PathBuf,
+	},
+	Noop,
 }

@@ -44,7 +44,7 @@ impl Navigator {
 		self.dirs.get(self.index).and_then(|d| d.parent())
 	}
 
-	pub fn current(&self) -> &Path {
+	pub fn current_dir(&self) -> &Path {
 		// SAFETY: Current directory should always exist.
 		&self.dirs[self.index]
 	}
