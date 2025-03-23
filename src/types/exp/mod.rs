@@ -330,14 +330,21 @@ impl Explorer {
 
 	pub fn paste(&mut self) -> Result<()> {
 		let files = self.cb.copy.iter().cloned().collect::<Vec<_>>();
+		let dest = self.nav.current_dir().to_path_buf();
+		let buf = self.buf;
 
 		self.cb.copy = Default::default();
 
-		let task = task::Copy::new(files, self.nav.current_dir().to_path_buf());
+		let task = task::Copy::new(files, dest.clone());
 
-		self.task.spawn(task, |file| match file.parent().map(|p| p.to_path_buf()) {
-			Some(dir) => Msg::DirUpdated { dir },
-			None => Msg::Noop,
+		self.task.spawn(task, move |_| {
+			let Ok(exp) = Self::get(&buf) else { return Msg::Noop };
+			let current_dir = exp.nav.current_dir();
+
+			match current_dir.starts_with(&dest) {
+				true => Msg::DirUpdated { dir: current_dir.to_path_buf() },
+				false => Msg::Noop,
+			}
 		});
 
 		Ok(())

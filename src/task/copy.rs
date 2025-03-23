@@ -84,9 +84,9 @@ impl Copy {
 }
 
 impl Task for Copy {
-	type Update = Arc<PathBuf>;
+	type Update = ();
 
-	fn execute(&self) -> TaskResult<impl Iterator<Item = TaskResult<Self::Update>>> {
+	fn execute(&self) -> TaskResult<impl Iterator<Item = TaskResult<()>>> {
 		let (sender, receiver) = crossbeam_channel::unbounded();
 
 		let progress = Arc::clone(&self.progress);
@@ -122,7 +122,7 @@ impl Task for Copy {
 		let copy_file = move |prefix, file| {
 			for file in Dfs::new(vec![file]).filter(|file| file.as_ref().map(|file| !file.is_dir()).unwrap_or(true)) {
 				let copier = copier(&prefix, file, dest.clone());
-				let (file, mut name, size, copier) = unwrap_ok_or!(copier, err, {
+				let (_, mut name, size, copier) = unwrap_ok_or!(copier, err, {
 					sender.send(Err(err)).ok();
 					continue;
 				});
@@ -130,8 +130,6 @@ impl Task for Copy {
 				progress.current_file.store(&mut name, Ordering::Release);
 				progress.current.total.store(size, Ordering::Release);
 				progress.current.done.store(0, Ordering::Release);
-
-				let file = Arc::new(file);
 
 				for bytes in copier {
 					let bytes = unwrap_ok_or!(bytes, err, {
@@ -141,7 +139,7 @@ impl Task for Copy {
 
 					progress.current.done.fetch_add(bytes as u64, Ordering::Release);
 
-					sender.send(Ok(Arc::clone(&file))).ok();
+					sender.send(Ok(())).ok();
 				}
 			}
 		};
