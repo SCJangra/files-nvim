@@ -52,6 +52,7 @@ pub enum OpenIn {
 
 impl Explorer {
 	/// Name of the explorer buffer.
+	#[allow(unused)]
 	pub const NAME: &str = "FilesNvim";
 
 	/// Namespace used for highlights and extmarks in the explorer.

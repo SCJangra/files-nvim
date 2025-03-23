@@ -17,6 +17,7 @@ pub(crate) enum Msg {
 	},
 	/// A task has produced an error.
 	TaskError {
+		#[allow(unused)]
 		index: usize,
 		error: TaskError,
 	},
