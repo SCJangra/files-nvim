@@ -23,6 +23,7 @@ static mut CONFIG: LazyLock<Arc<Config>> = LazyLock::new(|| {
 				cut: String::from("x"),
 				paste: String::from("p"),
 				create: String::from("a"),
+				delete: String::from("d"),
 			},
 			fields: vec![Field::Size],
 			name_width: 40,
@@ -36,6 +37,11 @@ static mut CONFIG: LazyLock<Arc<Config>> = LazyLock::new(|| {
 			dir_empty: Icon { name: String::from(Explorer::DIR_HIGHLIGHT), icon: '' },
 		},
 		input: None,
+		confirm: Function::from_fn(|_| {
+			unimplemented!("pass the `confirm` function in config");
+			#[allow(unreachable_code)]
+			0
+		}),
 		get_mode: Function::from_fn(|_| {
 			unimplemented!("pass the `get_mode` function in config");
 			#[allow(unreachable_code)]
@@ -50,6 +56,7 @@ pub struct Config {
 	pub explorer: ExplorerConfig,
 	pub icons: Icons,
 	pub input: Option<Input>,
+	pub confirm: Function<(String, String, i32, String), i32>,
 	pub get_mode: Function<(), i32>,
 }
 
@@ -112,8 +119,16 @@ impl Config {
 		&self.icons.default
 	}
 
-	pub fn input(&self) -> Result<&Input> {
-		self.input.as_ref().ok_or_else(|| Error::NoInputFn)
+	pub fn input(&self, opts: InputOpts, cb: InputCallback) -> Result<()> {
+		self.input
+			.as_ref()
+			.ok_or_else(|| Error::NoInputFn)?
+			.call((opts, cb))
+			.map_err(Into::into)
+	}
+
+	pub fn confirm(&self, prompt: String, options: String, default: i32, ty: String) -> Result<i32> {
+		self.confirm.call((prompt, options, default, ty)).map_err(Into::into)
 	}
 
 	pub fn get_mode(&self) -> Result<i32> {

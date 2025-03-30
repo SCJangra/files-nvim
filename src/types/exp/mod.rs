@@ -9,7 +9,7 @@ use rayon::slice::ParallelSliceMut;
 
 use std::{
 	fmt::Write,
-	ops::RangeInclusive,
+	ops::Range,
 	path::{Path, PathBuf},
 	sync::LazyLock,
 };
@@ -61,7 +61,10 @@ impl Explorer {
 	/// Highlight group name for a directory icon.
 	pub const DIR_HIGHLIGHT: &str = "FilesNvimDirectoryIcon";
 
-	pub(crate) fn selected_files(&self) -> Result<RangeInclusive<usize>> {
+	pub(crate) fn with_selected<F>(&self, f: F) -> Result<()>
+	where
+		F: FnOnce(Range<usize>) -> Result<()> + 'static,
+	{
 		let mode = Config::arc_clone().get_mode()?;
 
 		let normal = 110;
@@ -69,25 +72,30 @@ impl Explorer {
 		let visual_line = 86;
 		let visual_block = 22;
 
-		let range = if mode == normal {
-			let current = self.current_index()?;
-			current..=current
-		} else if mode == visual || mode == visual_line || mode == visual_block {
-			let from: Vec<usize> = api::call_function("getpos", ('v',))?;
-			let to: Vec<usize> = api::call_function("getpos", ('.',))?;
+		let buf = self.buf;
 
+		if mode == normal {
+			let current = self.current_index()?;
+			let range = current..current + 1;
+
+			nvim::schedule(move |_| f(range).unwrap_or_default());
+		} else if mode == visual || mode == visual_line || mode == visual_block {
 			api::input("<ESC>")?;
 
-			// Indexing here is one-based, so subtracting by 1.
-			let from = from[1] - 1;
-			let to = to[1] - 1;
+			nvim::schedule(move |_| {
+				let Ok((from, _)) = buf.get_mark('<').map_err(Error::from) else { return };
+				let from = from - 1;
 
-			from..=to
+				let Ok((to, _)) = buf.get_mark('>').map_err(Error::from) else { return };
+				let to = to - 1;
+
+				f(from..to + 1).unwrap_or_default();
+			});
 		} else {
 			return Err(Error::InvalidMode);
 		};
 
-		Ok(range)
+		Ok(())
 	}
 
 	/// Setup key mappings for this explorer.
@@ -111,6 +119,11 @@ impl Explorer {
 
 		self.buf.set_keymap(Mode::Normal, &maps.cut, "", &Self::map_cut(self.buf))?;
 		self.buf.set_keymap(Mode::Visual, &maps.cut, "", &Self::map_cut(self.buf))?;
+
+		self.buf
+			.set_keymap(Mode::Normal, &maps.delete, "", &Self::map_delete(self.buf))?;
+		self.buf
+			.set_keymap(Mode::Visual, &maps.delete, "", &Self::map_delete(self.buf))?;
 
 		Ok(())
 	}
@@ -156,9 +169,7 @@ impl Explorer {
 
 		let opts = InputOpts { prompt: String::from("Name: "), default: String::new() };
 
-		Config::arc_clone().input()?.call((opts, on_path_input))?;
-
-		Ok(())
+		Config::arc_clone().input(opts, on_path_input)
 	}
 
 	/// Re-render the files in the explorer, this is called after renaming, creating, and deleting
@@ -290,9 +301,7 @@ impl Explorer {
 		}
 	}
 
-	fn copy(&mut self) -> Result<()> {
-		let mut indices = self.selected_files()?;
-
+	fn copy(&mut self, mut indices: Range<usize>) -> Result<()> {
 		indices.try_for_each(|index| {
 			let file = self.files.get(index).ok_or_else(|| Error::NoFile(index))?;
 
@@ -304,14 +313,10 @@ impl Explorer {
 			};
 
 			Result::Ok(())
-		})?;
-
-		Ok(())
+		})
 	}
 
-	fn cut(&mut self) -> Result<()> {
-		let mut indices = self.selected_files()?;
-
+	fn cut(&mut self, mut indices: Range<usize>) -> Result<()> {
 		indices.try_for_each(|index| {
 			let file = self.files.get(index).ok_or_else(|| Error::NoFile(index))?;
 
@@ -323,7 +328,31 @@ impl Explorer {
 			};
 
 			Result::Ok(())
+		})
+	}
+
+	fn delete(&mut self, mut indices: Range<usize>) -> Result<()> {
+		let count = indices.len();
+
+		let prompt = format!("Delete {count} files?");
+		let options = String::from("&Yes\n&No");
+
+		let choice = Config::arc_clone().confirm(prompt, options, 2, String::from("Question"))?;
+
+		if choice != 1 {
+			return Ok(());
+		}
+
+		let files = indices.try_fold(Vec::with_capacity(count), |mut acc, index| {
+			let file = self.files.get(index).ok_or_else(|| Error::NoFile(index))?;
+			acc.push(file.clone());
+			Result::Ok(acc)
 		})?;
+
+		let dir = self.current_dir().to_path_buf();
+
+		let task = task::Delete::new(files);
+		self.task.spawn(task, move |_| Msg::DirUpdated { dir: dir.clone() });
 
 		Ok(())
 	}
@@ -409,12 +438,32 @@ impl Explorer {
 	}
 
 	fn map_copy(buf: Buffer) -> SetKeymapOpts {
-		let cb = move |_| Self::get_mut(&buf).and_then(|mut exp| exp.copy()).unwrap_or_default();
+		let cb = move |indices| {
+			let mut exp = Self::get_mut(&buf)?;
+			exp.copy(indices)
+		};
+
+		let cb = move |_| Self::get(&buf).and_then(|exp| exp.with_selected(cb)).unwrap_or_default();
 		SetKeymapOpts::builder().callback(cb).build()
 	}
 
 	fn map_cut(buf: Buffer) -> SetKeymapOpts {
-		let cb = move |_| Self::get_mut(&buf).and_then(|mut exp| exp.cut()).unwrap_or_default();
+		let cb = move |indices| {
+			let mut exp = Self::get_mut(&buf)?;
+			exp.cut(indices)
+		};
+
+		let cb = move |_| Self::get(&buf).and_then(|exp| exp.with_selected(cb)).unwrap_or_default();
+		SetKeymapOpts::builder().callback(cb).build()
+	}
+
+	fn map_delete(buf: Buffer) -> SetKeymapOpts {
+		let cb = move |indices| {
+			let mut exp = Self::get_mut(&buf)?;
+			exp.delete(indices)
+		};
+
+		let cb = move |_| Self::get(&buf).and_then(|exp| exp.with_selected(cb)).unwrap_or_default();
 		SetKeymapOpts::builder().callback(cb).build()
 	}
 

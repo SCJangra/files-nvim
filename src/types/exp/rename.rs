@@ -29,8 +29,6 @@ impl Explorer {
 
 		let opts = InputOpts { prompt: String::from("Rename: "), default: name };
 
-		Config::arc_clone().input()?.call((opts, on_new_name))?;
-
-		Ok(())
+		Config::arc_clone().input(opts, on_new_name)
 	}
 }

@@ -25,6 +25,7 @@ local setup = function(opts)
   local config = vim.tbl_deep_extend('force', plugin.get_config(), {
     icons = icons,
     input = vim.ui.input,
+    confirm = vim.fn.confirm,
     get_mode = function()
       local mode = api.nvim_get_mode().mode
       return string.byte(mode)
