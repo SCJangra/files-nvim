@@ -137,12 +137,12 @@ impl Explorer {
 	/// List the files of `dir` in the explorer.
 	fn list(&mut self, dir: PathBuf, nav: Nav) -> Result<()> {
 		match nav {
-			Nav::Next => self.nav.go_to_next(),
-			Nav::Prev => self.nav.go_to_prev(),
-			Nav::Up => self.nav.got_to_up(),
-			Nav::New => self.nav.insert(dir.clone()),
-			Nav::Noop => (),
-		}
+			Nav::Next => self.nav.next().map(|_| ()).ok_or_else(|| Error::NoNextDir),
+			Nav::Prev => self.nav.prev().map(|_| ()).ok_or_else(|| Error::NoPrevDir),
+			Nav::Up => self.nav.up().map(|_| ()).ok_or_else(|| Error::NoParentDir),
+			Nav::New => self.nav.insert(dir.clone()).map(|_| ()).ok_or_else(|| Error::NavigateToDir),
+			Nav::Noop => Ok(()),
+		}?;
 
 		self.task
 			.spawn_atomic(task::List::new(dir), |(dir, files)| Msg::List { dir, files });
@@ -477,18 +477,18 @@ impl Explorer {
 impl Explorer {
 	/// Go to the next directory.
 	fn next(&mut self) -> Result<()> {
-		let Some(dir) = self.nav.next() else { return Ok(()) };
+		let Some(dir) = self.nav.peek_next() else { return Ok(()) };
 		self.list(dir.to_path_buf(), Nav::Next)
 	}
 
 	/// Go to the previous file.
 	fn prev(&mut self) -> Result<()> {
-		let Some(dir) = self.nav.prev() else { return Ok(()) };
+		let Some(dir) = self.nav.peek_prev() else { return Ok(()) };
 		self.list(dir.to_path_buf(), Nav::Prev)
 	}
 
 	fn up(&mut self) -> Result<()> {
-		let Some(dir) = self.nav.up() else { return Ok(()) };
+		let Some(dir) = self.nav.peek_parent() else { return Ok(()) };
 		self.list(dir.to_path_buf(), Nav::Up)
 	}
 

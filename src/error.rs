@@ -42,6 +42,18 @@ pub enum Error {
 
 	#[error("InvalidMode")]
 	InvalidMode,
+
+	#[error("NoPrevDir")]
+	NoPrevDir,
+
+	#[error("NoNextDir")]
+	NoNextDir,
+
+	#[error("NoParentDir")]
+	NoParentDir,
+
+	#[error("NavigateToDir")]
+	NavigateToDir,
 }
 
 #[derive(Debug, thiserror::Error)]
