@@ -59,7 +59,13 @@ impl Explorer {
 	pub const NS: &str = "FilesNvimExplorer";
 
 	/// Highlight group name for a directory icon.
-	pub const DIR_HIGHLIGHT: &str = "FilesNvimDirectoryIcon";
+	pub const DIR_HL: &str = "FilesNvimDirectoryIcon";
+
+	/// Highlight for files copied to clipboard.
+	pub const COPY_HL: &str = "FilesNvimCopy";
+
+	/// Highlight for files cut to clipboard.
+	pub const CUT_HL: &str = "FilesNvimCut";
 
 	pub(crate) fn with_selected<F>(&self, f: F) -> Result<()>
 	where
@@ -215,8 +221,14 @@ impl Explorer {
 			.with_modifiable(|| self.buf.set_lines(0.., true, lines).map_err(Into::into))?;
 
 		self.buf.clear_namespace(self.ns, 0..)?;
-		for (index, icon) in self.files.iter().map(|f| config.icon(f)).enumerate() {
+		for (index, (file, icon)) in self.files.iter().map(|f| (f, config.icon(f))).enumerate() {
 			self.buf.add_highlight(self.ns, &icon.name, index, 0..1).ok();
+
+			if self.cb.cut.contains(file) {
+				self.buf.add_highlight(self.ns, Self::CUT_HL, index, 1..).ok();
+			} else if self.cb.copy.contains(file) {
+				self.buf.add_highlight(self.ns, Self::COPY_HL, index, 1..).ok();
+			}
 		}
 
 		Ok(())
@@ -313,7 +325,9 @@ impl Explorer {
 			};
 
 			Result::Ok(())
-		})
+		})?;
+
+		self.refresh()
 	}
 
 	fn cut(&mut self, mut indices: Range<usize>) -> Result<()> {
@@ -328,7 +342,9 @@ impl Explorer {
 			};
 
 			Result::Ok(())
-		})
+		})?;
+
+		self.refresh()
 	}
 
 	fn delete(&mut self, mut indices: Range<usize>) -> Result<()> {

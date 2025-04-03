@@ -33,8 +33,8 @@ static mut CONFIG: LazyLock<Arc<Config>> = LazyLock::new(|| {
 			file_name: Default::default(),
 			extension: Default::default(),
 			default: Icon { name: String::from("DevIconDefault"), icon: '' },
-			dir_full: Icon { name: String::from(Explorer::DIR_HIGHLIGHT), icon: '' },
-			dir_empty: Icon { name: String::from(Explorer::DIR_HIGHLIGHT), icon: '' },
+			dir_full: Icon { name: String::from(Explorer::DIR_HL), icon: '' },
+			dir_empty: Icon { name: String::from(Explorer::DIR_HL), icon: '' },
 		},
 		input: None,
 		confirm: Function::from_fn(|_| {
