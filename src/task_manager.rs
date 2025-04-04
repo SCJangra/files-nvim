@@ -5,11 +5,15 @@ use std::{
 };
 
 use crossbeam_channel::Sender;
-use nvim_oxi::libuv::AsyncHandle;
+use nvim_oxi::{
+	api::{self, opts::BufDeleteOpts, Buffer, Window},
+	libuv::AsyncHandle,
+};
 
 use crate::{
 	msg::Msg,
 	traits::{AtomicTask, IterExt, Task, TaskHandle},
+	types::{OpenIn, Result},
 };
 
 type ArcTaskHandle = Arc<dyn TaskHandle + Send + Sync>;
@@ -20,11 +24,18 @@ pub(crate) struct TaskManager {
 	unique_tasks: BTreeMap<TypeId, ArcTaskHandle>,
 	handle: AsyncHandle,
 	msg: Sender<Msg>,
+	view: Option<View>,
+}
+
+struct View {
+	#[allow(unused)]
+	win: Window,
+	buf: Buffer,
 }
 
 impl TaskManager {
-	pub(crate) fn new(handle: AsyncHandle, msg: Sender<Msg>) -> Self {
-		Self { index: 0, tasks: BTreeMap::new(), unique_tasks: BTreeMap::new(), handle, msg }
+	pub(crate) fn new(handle: AsyncHandle, msg: Sender<Msg>) -> Result<Self> {
+		Ok(Self { index: 0, tasks: BTreeMap::new(), unique_tasks: BTreeMap::new(), view: None, handle, msg })
 	}
 
 	pub(crate) fn spawn<T, M>(&mut self, task: T, msg: M)
@@ -114,5 +125,27 @@ impl TaskManager {
 			let id = task.type_id();
 			self.unique_tasks.remove(&id);
 		}
+	}
+
+	pub(crate) fn quit(self) -> Result<()> {
+		let Some(view) = self.view else { return Ok(()) };
+		view.buf.delete(&BufDeleteOpts::builder().force(true).build())?;
+		Ok(())
+	}
+
+	pub(crate) fn show(&mut self, open: OpenIn) -> Result<()> {
+		if let Some(ref view) = self.view {
+			view.buf.delete(&BufDeleteOpts::builder().force(true).build())?
+		}
+
+		let buf = api::create_buf(true, true)?;
+		let mut win = match open {
+			OpenIn::CurrentWin => api::get_current_win(),
+		};
+		win.set_buf(&buf)?;
+
+		self.view = Some(View { buf, win });
+
+		Ok(())
 	}
 }

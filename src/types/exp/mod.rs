@@ -119,6 +119,8 @@ impl Explorer {
 		self.buf.set_keymap(mode, &maps.rename, "", &Self::map_rename(self.buf))?;
 		self.buf.set_keymap(mode, &maps.create, "", &Self::map_create(self.buf))?;
 		self.buf.set_keymap(mode, &maps.paste, "", &Self::map_paste(self.buf))?;
+		self.buf
+			.set_keymap(mode, &maps.tm_current, "", &Self::map_tm_current(self.buf))?;
 
 		self.buf.set_keymap(Mode::Normal, &maps.copy, "", &Self::map_copy(self.buf))?;
 		self.buf.set_keymap(Mode::Visual, &maps.copy, "", &Self::map_copy(self.buf))?;
@@ -236,6 +238,8 @@ impl Explorer {
 
 	/// Exit this explorer.
 	fn quit(self) -> Result<()> {
+		self.task.quit()?;
+
 		self.buf
 			.delete(&BufDeleteOpts::builder().force(true).build())
 			.map_err(Into::into)
@@ -272,7 +276,7 @@ impl Explorer {
 			ns,
 			files: Vec::new(),
 			nav: Navigator::new(dir.clone()),
-			task: TaskManager::new(handle, msg_sender),
+			task: TaskManager::new(handle, msg_sender)?,
 			cb: Clipboard::new(),
 		};
 
@@ -485,6 +489,15 @@ impl Explorer {
 
 	fn map_paste(buf: Buffer) -> SetKeymapOpts {
 		let cb = move |_| Self::get_mut(&buf).and_then(|mut exp| exp.paste()).unwrap_or_default();
+		SetKeymapOpts::builder().callback(cb).build()
+	}
+
+	fn map_tm_current(buf: Buffer) -> SetKeymapOpts {
+		let cb = move |_| {
+			Self::get_mut(&buf)
+				.and_then(|mut exp| exp.task.show(OpenIn::CurrentWin))
+				.unwrap_or_default()
+		};
 		SetKeymapOpts::builder().callback(cb).build()
 	}
 }

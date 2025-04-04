@@ -23,6 +23,8 @@ pub struct ExplorerKeymaps {
 	pub paste: String,
 	pub create: String,
 	pub delete: String,
+	/// Show task manager in current window.
+	pub tm_current: String,
 }
 
 crate::lua_interop!(ExplorerConfig);
