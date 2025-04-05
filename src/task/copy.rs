@@ -23,7 +23,7 @@ pub struct Copy {
 	dest: PathBuf,
 	canceled: AtomicBool,
 	progress: Arc<CopyProgress>,
-	update_interval: Duration,
+	progress_interval: Duration,
 }
 
 pub struct CopyProgress {
@@ -78,7 +78,7 @@ impl Copy {
 				current: Progress::default(),
 			}),
 			// TODO Get this from the config.
-			update_interval: Duration::from_millis(500),
+			progress_interval: Duration::from_millis(500),
 		}
 	}
 }
@@ -154,8 +154,8 @@ impl Task for Copy {
 		Ok(receiver.into_iter())
 	}
 
-	fn update_interval(&self) -> Duration {
-		self.update_interval
+	fn progress_interval(&self) -> Duration {
+		self.progress_interval
 	}
 }
 

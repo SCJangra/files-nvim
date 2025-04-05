@@ -17,7 +17,7 @@ use crate::{
 pub struct Delete {
 	files: Vec<File>,
 	canceled: AtomicBool,
-	update_interval: Duration,
+	progress_interval: Duration,
 	progress: Arc<Progress>,
 }
 
@@ -26,7 +26,7 @@ impl Delete {
 		Self {
 			files,
 			canceled: AtomicBool::new(false),
-			update_interval: Duration::from_millis(500),
+			progress_interval: Duration::from_millis(500),
 			progress: Arc::new(Progress::default()),
 		}
 	}
@@ -65,8 +65,8 @@ impl Task for Delete {
 		Ok(iter)
 	}
 
-	fn update_interval(&self) -> std::time::Duration {
-		self.update_interval
+	fn progress_interval(&self) -> std::time::Duration {
+		self.progress_interval
 	}
 }
 

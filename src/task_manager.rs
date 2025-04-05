@@ -58,7 +58,7 @@ impl TaskManager {
 				},
 			};
 
-			iter.for_each_interval(task.update_interval(), |u| {
+			iter.for_each_interval(task.progress_interval(), |u| {
 				let m = match u {
 					Ok(u) => msg(u),
 					Err(error) => Msg::TaskError { index, error },
