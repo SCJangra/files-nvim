@@ -1,3 +1,7 @@
+mod config;
+
+pub use config::*;
+
 use std::{
 	any::{Any, TypeId},
 	collections::BTreeMap,
@@ -13,7 +17,7 @@ use nvim_oxi::{
 use crate::{
 	msg::Msg,
 	traits::{AtomicTask, IterExt, Task, TaskHandle},
-	types::{OpenIn, Result},
+	types::{Config, OpenIn, Result},
 };
 
 type ArcTaskHandle = Arc<dyn TaskHandle + Send + Sync>;
@@ -58,7 +62,9 @@ impl TaskManager {
 				},
 			};
 
-			iter.for_each_interval(task.progress_interval(), |u| {
+			let progress_interval = { Config::arc_clone().task_manager.progress_interval };
+
+			iter.for_each_interval(progress_interval, |u| {
 				let m = match u {
 					Ok(u) => msg(u),
 					Err(error) => Msg::TaskError { index, error },

@@ -1,4 +1,7 @@
-use std::sync::{Arc, LazyLock};
+use std::{
+	sync::{Arc, LazyLock},
+	time::Duration,
+};
 
 use nvim_oxi::{
 	conversion::{FromObject, ToObject},
@@ -6,7 +9,7 @@ use nvim_oxi::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{error::*, traits::*, types::*};
+use crate::{error::*, task_manager::TaskManagerConfig, traits::*, types::*};
 
 /// Global configuration of the plugin.
 static mut CONFIG: LazyLock<Arc<Config>> = LazyLock::new(|| {
@@ -30,6 +33,7 @@ static mut CONFIG: LazyLock<Arc<Config>> = LazyLock::new(|| {
 			name_width: 40,
 			column_seperator: String::from(" "),
 		},
+		task_manager: TaskManagerConfig { progress_interval: Duration::from_millis(500) },
 		icons: Icons {
 			file_name: Default::default(),
 			extension: Default::default(),
@@ -55,6 +59,7 @@ static mut CONFIG: LazyLock<Arc<Config>> = LazyLock::new(|| {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Config {
 	pub explorer: ExplorerConfig,
+	pub task_manager: TaskManagerConfig,
 	pub icons: Icons,
 	pub input: Option<Input>,
 	pub confirm: Function<(String, String, i32, String), i32>,

@@ -17,8 +17,6 @@ pub trait Task {
 
 	/// Execute this task.
 	fn execute(&self) -> TaskResult<impl Iterator<Item = TaskResult<Self::Update>>>;
-
-	fn progress_interval(&self) -> Duration;
 }
 
 pub trait AtomicTask {

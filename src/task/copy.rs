@@ -6,7 +6,6 @@ use std::{
 		atomic::{AtomicBool, AtomicPtr, Ordering},
 		Arc,
 	},
-	time::Duration,
 };
 use unwrap_or::*;
 
@@ -23,7 +22,6 @@ pub struct Copy {
 	dest: PathBuf,
 	canceled: AtomicBool,
 	progress: Arc<CopyProgress>,
-	progress_interval: Duration,
 }
 
 pub struct CopyProgress {
@@ -77,8 +75,6 @@ impl Copy {
 				current_file: AtomicPtr::new(&mut String::new()),
 				current: Progress::default(),
 			}),
-			// TODO Get this from the config.
-			progress_interval: Duration::from_millis(500),
 		}
 	}
 }
@@ -152,10 +148,6 @@ impl Task for Copy {
 		});
 
 		Ok(receiver.into_iter())
-	}
-
-	fn progress_interval(&self) -> Duration {
-		self.progress_interval
 	}
 }
 
