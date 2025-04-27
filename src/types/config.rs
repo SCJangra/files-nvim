@@ -9,7 +9,12 @@ use nvim_oxi::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{error::*, task_manager::TaskManagerConfig, traits::*, types::*};
+use crate::{
+	error::*,
+	task_manager::{TaskManagerConfig, TaskProgressConfig},
+	traits::*,
+	types::*,
+};
 
 /// Global configuration of the plugin.
 static mut CONFIG: LazyLock<Arc<Config>> = LazyLock::new(|| {
@@ -33,7 +38,9 @@ static mut CONFIG: LazyLock<Arc<Config>> = LazyLock::new(|| {
 			name_width: 40,
 			column_seperator: String::from(" "),
 		},
-		task_manager: TaskManagerConfig { progress_interval: Duration::from_millis(500) },
+		task_manager: TaskManagerConfig {
+			progress: TaskProgressConfig { interval: Duration::from_millis(500), fill_char: String::from("-") },
+		},
 		icons: Icons {
 			file_name: Default::default(),
 			extension: Default::default(),
@@ -52,6 +59,11 @@ static mut CONFIG: LazyLock<Arc<Config>> = LazyLock::new(|| {
 			#[allow(unreachable_code)]
 			0
 		}),
+		win_width: Function::from_fn(|_| {
+			unimplemented!("pass the `win_width` function in config");
+			#[allow(unreachable_code)]
+			0
+		}),
 	})
 });
 
@@ -64,6 +76,7 @@ pub struct Config {
 	pub input: Option<Input>,
 	pub confirm: Function<(String, String, i32, String), i32>,
 	pub get_mode: Function<(), i32>,
+	pub win_width: Function<i32, u32>,
 }
 
 impl Config {
@@ -139,6 +152,10 @@ impl Config {
 
 	pub fn get_mode(&self) -> Result<i32> {
 		self.get_mode.call(()).map_err(Into::into)
+	}
+
+	pub fn win_width(&self, winid: i32) -> Result<u32> {
+		self.win_width.call(winid).map_err(Into::into)
 	}
 }
 

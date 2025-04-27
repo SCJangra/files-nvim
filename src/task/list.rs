@@ -6,6 +6,8 @@ use std::{
 
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
+use nvim_oxi as nvim;
+
 use crate::{
 	error::TaskError,
 	traits::{AtomicTask, TaskHandle},
@@ -64,5 +66,9 @@ impl TaskHandle for List {
 	#[inline(always)]
 	fn is_unique(&self) -> bool {
 		true
+	}
+
+	fn progress(&self, _width: u32) -> Vec<nvim::String> {
+		vec![]
 	}
 }

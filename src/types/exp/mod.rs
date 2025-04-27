@@ -22,7 +22,7 @@ use nvim_oxi::{
 	self as nvim,
 	api::{
 		self,
-		opts::{BufDeleteOpts, SetKeymapOpts},
+		opts::{BufDeleteOpts, OptionOpts, SetKeymapOpts},
 		types::Mode,
 		Buffer,
 	},
@@ -138,7 +138,8 @@ impl Explorer {
 
 	/// Setup buffer options for this explorer.
 	pub fn setup_opts(&self) -> Result<()> {
-		self.buf.set_option("ma", false)?;
+		let opts = OptionOpts::builder().buffer(self.buf).build();
+		api::set_option_value("ma", false, &opts)?;
 		Ok(())
 	}
 
@@ -195,10 +196,7 @@ impl Explorer {
 			let icon = config.icon(file);
 			let width = config.explorer.name_width;
 
-			let (name, dots) = match name.len() > width {
-				true => (&name[..width.saturating_sub(2)], ".."),
-				false => (name, ""),
-			};
+			let (name, dots) = fun::trim_str(name, width);
 
 			b.write_fmt(format_args!("{:2} {name:1$}{dots}", icon.icon, width - dots.len()))
 				.map_err(Error::from)
@@ -211,7 +209,12 @@ impl Explorer {
 						let (value, unit) = fun::bytes_to_size(file.size);
 						let val = (value * 100.0) / 100.0;
 
-						b.write_fmt(format_args!("{val:>6.2} {unit}")).map_err(Error::from).ok();
+						match val {
+							0.0..10.0 => b.write_fmt(format_args!("{val:>3.1}{unit}")),
+							_ => b.write_fmt(format_args!("{val:>3.0}{unit}")),
+						}
+						.map_err(Error::from)
+						.ok();
 					},
 				}
 			});
@@ -299,7 +302,7 @@ impl Explorer {
 					exp.refresh()?;
 				}
 
-				Ok(())
+				Result::Ok(())
 			},
 			Msg::TaskDone { index } => {
 				exp.task.remove_task(index);
@@ -314,7 +317,9 @@ impl Explorer {
 				Ok(())
 			},
 			Msg::Noop => Ok((/* Do nothing */)),
-		}
+		}?;
+
+		exp.task.refresh()
 	}
 
 	fn copy(&mut self, mut indices: Range<usize>) -> Result<()> {

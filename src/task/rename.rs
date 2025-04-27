@@ -8,6 +8,8 @@ use crate::{
 	traits::{AtomicTask, TaskHandle},
 };
 
+use nvim_oxi as nvim;
+
 pub(crate) struct Rename {
 	/// Indicates whether the rename operation has been canceled.
 	canceled: AtomicBool,
@@ -49,5 +51,9 @@ impl TaskHandle for Rename {
 	#[inline(always)]
 	fn is_unique(&self) -> bool {
 		false
+	}
+
+	fn progress(&self, _width: u32) -> Vec<nvim::String> {
+		vec![]
 	}
 }

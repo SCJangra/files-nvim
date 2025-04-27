@@ -1,8 +1,10 @@
+use std::fmt;
+
 use crate::{error::*, traits::*, types};
 
 use nvim_oxi::{
 	self as nvim,
-	api::{Buffer, Error as ApiError},
+	api::{self, opts::OptionOpts, Buffer, Error as ApiError},
 	conversion::Error as ConversionError,
 };
 
@@ -40,11 +42,16 @@ impl Drop for Error {
 
 impl WithModifiable for Buffer {
 	fn with_modifiable(&self, f: impl FnOnce() -> types::Result<()>) -> types::Result<()> {
-		self.set_option("ma", true)?;
+		let opts = OptionOpts::builder().buffer(*self).build();
+
+		api::set_option_value("ma", true, &opts)?;
 		f()?;
-		self.set_option("ma", false)?;
+		api::set_option_value("ma", false, &opts)?;
+
 		Ok(())
 	}
 }
 
 impl<I: Iterator> IterExt for I {}
+
+impl<T: fmt::Write> WriteExt for T {}

@@ -10,6 +10,8 @@ use crate::{
 
 use super::TaskResult;
 
+use nvim_oxi as nvim;
+
 pub struct Create {
 	canceled: AtomicBool,
 	path: String,
@@ -47,5 +49,9 @@ impl TaskHandle for Create {
 	#[inline(always)]
 	fn is_unique(&self) -> bool {
 		false
+	}
+
+	fn progress(&self, _width: u32) -> Vec<nvim::String> {
+		vec![]
 	}
 }

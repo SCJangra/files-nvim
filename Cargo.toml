@@ -34,7 +34,7 @@ tree_magic_mini = "3"
 open = "5"
 unwrap_or = "1"
 
-nvim-oxi = { git = "https://github.com/SCJangra/nvim-oxi.git", branch = "main", features = ["neovim-0-10", "libuv"] }
+nvim-oxi = { git = "https://github.com/SCJangra/nvim-oxi.git", branch = "main", features = ["neovim-nightly", "libuv"] }
 serde = { version = "1", features = ["derive"] }
 
 [dev-dependencies]

@@ -2,9 +2,7 @@ use std::fs;
 
 use rayon::iter::{ParallelBridge, ParallelExtend, ParallelIterator};
 
-use crate::types::File;
-
-use super::TaskResult;
+use crate::{task::TaskResult, types::File};
 
 pub(crate) struct Dfs {
 	stack: Vec<Node>,

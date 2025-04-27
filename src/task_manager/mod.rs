@@ -10,7 +10,11 @@ use std::{
 
 use crossbeam_channel::Sender;
 use nvim_oxi::{
-	api::{self, opts::BufDeleteOpts, Buffer, Window},
+	api::{
+		self,
+		opts::{BufDeleteOpts, SetExtmarkOpts},
+		Buffer, Window,
+	},
 	libuv::AsyncHandle,
 };
 
@@ -29,6 +33,7 @@ pub(crate) struct TaskManager {
 	handle: AsyncHandle,
 	msg: Sender<Msg>,
 	view: Option<View>,
+	ns: u32,
 }
 
 struct View {
@@ -38,8 +43,25 @@ struct View {
 }
 
 impl TaskManager {
+	/// Namespace used for highlights and extmarks in the task manager.
+	pub const NS: &str = "FilesNvimTaskManager";
+
+	/// Highlight group for task headers.
+	pub const HEAD_HL: &str = "FilesNvimTaskHead";
+
+	/// Highlight group for task body.
+	pub const BODY_HL: &str = "FilesNvimTaskBody";
+
 	pub(crate) fn new(handle: AsyncHandle, msg: Sender<Msg>) -> Result<Self> {
-		Ok(Self { index: 0, tasks: BTreeMap::new(), unique_tasks: BTreeMap::new(), view: None, handle, msg })
+		Ok(Self {
+			index: 0,
+			tasks: BTreeMap::new(),
+			unique_tasks: BTreeMap::new(),
+			view: None,
+			handle,
+			msg,
+			ns: api::create_namespace(Self::NS),
+		})
 	}
 
 	pub(crate) fn spawn<T, M>(&mut self, task: T, msg: M)
@@ -62,7 +84,7 @@ impl TaskManager {
 				},
 			};
 
-			let progress_interval = { Config::arc_clone().task_manager.progress_interval };
+			let progress_interval = { Config::arc_clone().task_manager.progress.interval };
 
 			iter.for_each_interval(progress_interval, |u| {
 				let m = match u {
@@ -133,24 +155,68 @@ impl TaskManager {
 		}
 	}
 
+	/// Quit the task manager and delete the underlying buffer.
 	pub(crate) fn quit(self) -> Result<()> {
 		let Some(view) = self.view else { return Ok(()) };
 		view.buf.delete(&BufDeleteOpts::builder().force(true).build())?;
 		Ok(())
 	}
 
+	/// Show the task manager.
 	pub(crate) fn show(&mut self, open: OpenIn) -> Result<()> {
 		if let Some(ref view) = self.view {
 			view.buf.delete(&BufDeleteOpts::builder().force(true).build())?
 		}
 
 		let buf = api::create_buf(true, true)?;
+
 		let mut win = match open {
 			OpenIn::CurrentWin => api::get_current_win(),
 		};
+
 		win.set_buf(&buf)?;
 
 		self.view = Some(View { buf, win });
+
+		Ok(())
+	}
+
+	/// Refresh the task manager. This is a no-op if the task manager is hidden or closed.
+	pub(crate) fn refresh(&self) -> Result<()> {
+		let Some(view) = &self.view else { return Ok(()) };
+
+		let width = { Config::arc_clone().win_width(view.win.handle())? };
+
+		view.buf.clear_namespace(self.ns, ..)?;
+
+		let mut count = 0;
+
+		for (line, (_, task)) in self.tasks.iter().enumerate() {
+			let mut lines = task.progress(width);
+
+			if lines.is_empty() {
+				continue;
+			}
+
+			let head = lines.remove(0);
+			let body = lines.into_iter().map(|line| (line, Self::BODY_HL)).map(|c| [c]);
+
+			let opts = SetExtmarkOpts::builder()
+				.end_row(line + 1)
+				.end_col(0)
+				.hl_group(Self::HEAD_HL)
+				.hl_eol(true)
+				.virt_lines(body)
+				.build();
+
+			view.buf.set_lines(line..=line, true, [head])?;
+			view.buf.set_extmark(self.ns, line, 0, &opts)?;
+
+			count += 1;
+		}
+
+		// Clear remaining lines
+		view.buf.set_lines(count.., true, Vec::<String>::new())?;
 
 		Ok(())
 	}

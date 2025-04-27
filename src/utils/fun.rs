@@ -8,18 +8,25 @@ pub fn bytes_to_size(bytes: u64) -> (f64, &'static str) {
 	const PB: f64 = TB * 1000.0;
 
 	if (0.0..KB).contains(&bytes) {
-		(bytes, " B")
+		(bytes, "B")
 	} else if (KB..MB).contains(&bytes) {
-		(bytes / KB, "KB")
+		(bytes / KB, "K")
 	} else if (MB..GB).contains(&bytes) {
-		(bytes / MB, "MB")
+		(bytes / MB, "M")
 	} else if (GB..TB).contains(&bytes) {
-		(bytes / GB, "GB")
+		(bytes / GB, "G")
 	} else if (TB..PB).contains(&bytes) {
-		(bytes / TB, "TB")
+		(bytes / TB, "T")
 	} else if (PB..).contains(&bytes) {
-		(bytes / PB, "PB")
+		(bytes / PB, "P")
 	} else {
 		unreachable!()
+	}
+}
+
+pub fn trim_str(val: &str, width: usize) -> (&str, &'static str) {
+	match val.len() > width {
+		true => (&val[..width.saturating_sub(2)], ".."),
+		false => (val, ""),
 	}
 }

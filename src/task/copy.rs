@@ -1,18 +1,23 @@
 use std::{
+	fmt::Write as _,
 	fs,
-	io::{BufReader, BufWriter, Read, Write},
+	io::{BufReader, BufWriter, Read, Write as _},
 	path::PathBuf,
 	sync::{
-		atomic::{AtomicBool, AtomicPtr, Ordering},
+		atomic::{AtomicBool, AtomicPtr, AtomicU64, Ordering},
 		Arc,
 	},
+	time::Instant,
 };
 use unwrap_or::*;
 
+use nvim_oxi as nvim;
+
 use crate::{
 	error::TaskError,
-	traits::{Task, TaskHandle},
-	types::{File, Progress},
+	traits::{Task, TaskHandle, WriteExt},
+	types::{Config, File, Progress},
+	utils::fun,
 };
 
 use super::{dfs::Dfs, TaskResult};
@@ -28,6 +33,7 @@ pub struct CopyProgress {
 	files: Progress,
 	bytes: Progress,
 	current_file: AtomicPtr<String>,
+	duration: AtomicU64,
 	current: Progress,
 }
 
@@ -73,6 +79,7 @@ impl Copy {
 				files: Progress::default(),
 				bytes: Progress::default(),
 				current_file: AtomicPtr::new(&mut String::new()),
+				duration: AtomicU64::new(0),
 				current: Progress::default(),
 			}),
 		}
@@ -83,6 +90,8 @@ impl Task for Copy {
 	type Update = ();
 
 	fn execute(&self) -> TaskResult<impl Iterator<Item = TaskResult<()>>> {
+		let start_time = Instant::now();
+
 		let (sender, receiver) = crossbeam_channel::unbounded();
 
 		let progress = Arc::clone(&self.progress);
@@ -134,9 +143,13 @@ impl Task for Copy {
 					});
 
 					progress.current.done.fetch_add(bytes as u64, Ordering::Release);
+					progress.bytes.done.fetch_add(bytes as u64, Ordering::Release);
+					progress.duration.store(start_time.elapsed().as_secs(), Ordering::Relaxed);
 
 					sender.send(Ok(())).ok();
 				}
+
+				progress.files.done.fetch_add(1, Ordering::Release);
 			}
 		};
 
@@ -165,5 +178,56 @@ impl TaskHandle for Copy {
 	#[inline(always)]
 	fn is_unique(&self) -> bool {
 		false
+	}
+
+	fn progress(&self, width: u32) -> Vec<nvim::String> {
+		let acquire = Ordering::Acquire;
+		let fill_char = &Config::arc_clone().task_manager.progress.fill_char;
+
+		let header = {
+			let total = self.progress.files.total.load(acquire);
+			let done = self.progress.files.done.load(acquire);
+
+			let dest = self.dest.file_name().unwrap_or_default().to_str().unwrap_or_default();
+
+			let s = format!("Copy [{done}/{total}] files to {dest}");
+			let (s, dots) = fun::trim_str(&s, width as usize);
+
+			nvim::string!("{s}{dots}")
+		};
+
+		let current = {
+			let progress = self.progress.current.to_size_string(" / ");
+
+			let name_width = width.saturating_sub(progress.len() as u32) as usize;
+
+			let name = unsafe { &*self.progress.current_file.load(acquire) };
+			let (name, dots) = fun::trim_str(name, name_width);
+
+			nvim::string!("{name}{dots:<w$}{progress}", w = name_width - name.len())
+		};
+
+		let bar = {
+			let mut line = nvim::StringBuilder::with_capacity(width as usize);
+			(0..width).for_each(|_| line.write_str(fill_char).unwrap_or_default());
+			line.finish()
+		};
+
+		let total = {
+			let elapsed = self.progress.duration.load(acquire);
+
+			let progress = self.progress.bytes.to_size_string(" / ");
+			let duration = {
+				let mut d = String::new();
+				d.write_duration(elapsed).ok();
+				d
+			};
+
+			let progress_width = width.saturating_sub(duration.len() as u32) as usize;
+
+			nvim::string!("{progress:<w$}{duration}", w = progress_width)
+		};
+
+		vec![header, current, bar, total]
 	}
 }

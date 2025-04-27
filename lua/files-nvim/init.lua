@@ -1,4 +1,5 @@
 local api = vim.api
+local fn = vim.fn
 
 local prefix = function(icon)
   return {
@@ -29,6 +30,10 @@ local setup = function(opts)
     get_mode = function()
       local mode = api.nvim_get_mode().mode
       return string.byte(mode)
+    end,
+    win_width = function(winid)
+      local info = fn.getwininfo(winid)[1]
+      return info.width - info.textoff
     end,
   }, opts)
   plugin.set_config(config)
